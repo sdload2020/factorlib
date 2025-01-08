@@ -12,7 +12,7 @@ def run_scripts(factor_name, config_path):
 
 def main():
     parser = argparse.ArgumentParser(description='Run factor computations, backtest, and plotting for multiple factors.')
-    parser.add_argument('--config', type=str, default='/home/yangzhilin/backtest/backtest_light/code/configs/config.yaml', help='Path to the config YAML file.')
+    parser.add_argument('--config', type=str, default='/home/yangzhilin/backtest/backtest_light/code/configs/factor.yaml', help='Path to the config YAML file.')
     args = parser.parse_args()
 
     with open(args.config, 'r') as f:

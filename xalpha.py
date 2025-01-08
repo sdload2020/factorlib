@@ -5,7 +5,7 @@ from datetime import timedelta
 from tqdm import tqdm
 import os
 import time
-from factor_code.config import (BASE_PATH, DATA_PATH, UNIVERSE_PATH, FACTOR_VALUES_PATH,
+from configs.syspath import (BASE_PATH, DATA_PATH, UNIVERSE_PATH, FACTOR_VALUES_PATH,
                                 BACKTEST_PATH, IMAGE_PATH, INTERMEDIATE_PATH, STATS_PATH)
 import importlib
 

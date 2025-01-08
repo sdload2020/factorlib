@@ -3,7 +3,7 @@ import time
 import yaml
 import argparse
 from xalpha import Xalpha
-from factor_code.config import (BASE_PATH, DATA_PATH, UNIVERSE_PATH, FACTOR_VALUES_PATH,
+from configs.syspath import (BASE_PATH, DATA_PATH, UNIVERSE_PATH, FACTOR_VALUES_PATH,
                                 BACKTEST_PATH, IMAGE_PATH, INTERMEDIATE_PATH, STATS_PATH)
 import os 
 import pandas as pd
@@ -56,32 +56,3 @@ if __name__ == "__main__":
     total_time = end_time - start_time
     print(f"run_backtest.py Total script runtime: {total_time:.2f} seconds")
 
-# run_backtest.py
-# import time
-# import yaml
-# import argparse
-# from xalpha import Xalpha
-
-# def run_backtest(simulator):
-#     stats = simulator.report_stats()
-#     return stats
-
-# if __name__ == "__main__":
-#     parser = argparse.ArgumentParser(description='Run backtest for a specific factor.')
-#     parser.add_argument('--name', type=str, required=True, help='Name of the factor to run backtest.')
-#     parser.add_argument('--config', type=str, default='configs/config.yaml', help='Path to the config YAML file.')
-#     args = parser.parse_args()
-
-#     start_time = time.time()
-#     with open(args.config, 'r') as f:
-#         config = yaml.safe_load(f)
-#     factor_params = next((f for f in config['factors'] if f['name'] == args.name), None)
-#     if factor_params is None:
-#         raise ValueError(f"Factor {args.name} not found in the config file.")
-#     simulator = Xalpha(factor_params)
-#     performance_stats = run_backtest(simulator)
-#     print(performance_stats)
-    
-#     end_time = time.time()
-#     total_time = end_time - start_time
-#     print(f"run_backtest.py Total script runtime: {total_time:.2f} seconds")
