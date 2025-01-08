@@ -5,7 +5,7 @@
 1. 在终端中 `cd` 到项目路径
 2. 修改 `factor_code` 文件夹中的因子文件，每一个因子一个 `.py` 文件，文件名为 `{因子名}.py`
 3. 修改 `configs.yaml` 中的因子配置信息
-4. 修改 `configs.syspath.py` 中的 `BASE_PATH`，作为项目根目录
+4. 修改 `configs.syspath.py` 中的 `BASE_PATH`，作为项目根目录 (不是必须项，cd到项目路径就不需要了)
 5. 安装所需包：
 
     ```bash
