@@ -17,6 +17,10 @@
     ```bash
     python main.py
     ```
+7. 如果需要配置日更流程， 需要在 `cron_manager.py` 里面配置好需要的时间信息，会自动生成crontab按照指定参数运行，配置好以后
+    ```bash
+    python cron_manager.py
+    ```
 
 ## 结果显示
 
@@ -25,3 +29,4 @@
     1. `stats.csv` 回测的历史记录
     2. `image` 回测绘图
     3. `intermediate` 绘图用到的中间数据
+3. 日志信息在 `logs` 中
