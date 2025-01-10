@@ -17,6 +17,14 @@ factors:
     # depend_factor_field:     # 以来的前置因子的名称，使用时首先要确保前置因子已经计算完毕
     #   - 'xy'
     #   - 'xy1'
+    type: 'pv'
+    if_prod: False
+    level: 1
+    if_crontab: False
+    out_sample_date: '2024-01-01'
+
+
+  
   
 
   # - name: xy3

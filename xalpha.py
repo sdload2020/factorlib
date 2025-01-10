@@ -6,7 +6,7 @@ from tqdm import tqdm
 import os
 import time
 from configs.syspath import (BASE_PATH, DATA_PATH, UNIVERSE_PATH, FACTOR_VALUES_PATH,
-                                BACKTEST_PATH, IMAGE_PATH, INTERMEDIATE_PATH, STATS_PATH)
+                                BACKTEST_PATH, IMAGE_PATH, INTERMEDIATE_PATH, STATS_PATH, FACTOR_CODE_PATH)
 import importlib
 
 def rescale(dft, fre, bar_fields, require_last=True):
@@ -88,6 +88,19 @@ class Xalpha:
         self.run_mode = prams['run_mode']
         self.composite_method = prams.get('composite_method', False)
         self.depend_factor_field = prams.get('depend_factor_field', None)
+        #
+        # type: 'pv'
+        # if_prod: 'False'
+        # level: 1
+        # if_crontab: 'False'
+        # addition_start_date: '2024-01-01'
+
+        self.type = prams.get('type', None)
+        self.if_prod = prams.get('if_prod', False)
+        self.level = prams.get('level', 1)
+        self.if_crontab = prams.get('if_crontab', False)
+        current_date_str = time.strftime('%Y-%m-%d', time.localtime(time.time()))
+        self.out_sample_date = prams.get('out_sample_date', None)
         if self.composite_method:
             if not self.depend_factor_field:
                 raise ValueError("depend_factor_field must be provided when composite_method is True.")
@@ -499,28 +512,35 @@ class Xalpha:
             'raw_pnl': raw_pnl,
             'ic': ic
         })
-
+        value_start_date = indicator_dict.index[0][0]
+        value_end_date = indicator_dict.index[-1][0]
         stats_path = STATS_PATH
         stats_dir = os.path.dirname(stats_path)
         os.makedirs(stats_dir, exist_ok=True)
 
         current_datetime = pd.Timestamp.now().strftime('%Y-%m-%d %H:%M:%S')
         stats_data = {
-            'datetime': [current_datetime],
             'name': [self.name],
-            'pre_lag': [self.pre_lag],
-            'bar_lag': [self.bar_lag],
+            'level': [self.level],
+            'update_time': [current_datetime],
+            'type': [self.type],
+            'if_prod': [self.if_prod],
+            'start_date': [value_start_date.strftime('%Y-%m-%d')],
+            'end_date': [value_end_date.strftime('%Y-%m-%d')],
             'frequency': [self.fre],
-            'start_date': [self.start_date.strftime('%Y-%m-%d')],
-            'end_date': [self.end_date.strftime('%Y-%m-%d')],
             'pot': [pot],
             'hd': [hd],
             'mdd': [mdd],
             'wratio': [wratio],
             'ir': [ir],
             'ypnl': [ypnl],
-            'sharpe': [sharpe],
             'max_leverage_ratio': [max_leverage_ratio],
+            'sharpe': [sharpe],
+            'if_crontab': [self.if_crontab],
+            'out_sample_date': [self.out_sample_date.strftime('%Y-%m-%d')],
+            'factor_value_path': [FACTOR_VALUES_PATH_NEW],
+            'factor_code_path': [os.path.join(FACTOR_CODE_PATH, f"{self.name}.py")],
+            'intermediate_path': [os.path.join(INTERMEDIATE_PATH, f"{self.name}.parquet")]
         }
         stats_df = pd.DataFrame(stats_data)
 
