@@ -6,8 +6,15 @@ from tqdm import tqdm
 import os
 import time
 from configs.syspath import (BASE_PATH, DATA_PATH, UNIVERSE_PATH, FACTOR_VALUES_PATH,
-                                BACKTEST_PATH, IMAGE_PATH, INTERMEDIATE_PATH, STATS_PATH, FACTOR_CODE_PATH)
+                                BACKTEST_PATH, IMAGE_PATH, INTERMEDIATE_PATH, STATS_PATH, FACTOR_CODE_PATH, SHARED_PATH)
 import importlib
+import mysql.connector
+from configs.dbconfig import db_config
+from configs.tablecreator import create_backtest_result_table
+import datetime
+from mysql.connector import errorcode
+import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
 
 def rescale(dft, fre, bar_fields, require_last=True):
     fre2n = {
@@ -88,6 +95,7 @@ class Xalpha:
         self.run_mode = prams['run_mode']
         self.composite_method = prams.get('composite_method', False)
         self.depend_factor_field = prams.get('depend_factor_field', None)
+        self.author = prams.get('author', 'Unknown')
         #
         # type: 'pv'
         # if_prod: 'False'
@@ -95,7 +103,7 @@ class Xalpha:
         # if_crontab: 'False'
         # addition_start_date: '2024-01-01'
 
-        self.type = prams.get('type', None)
+        self.factortype = prams.get('factortype', None)
         self.if_prod = prams.get('if_prod', False)
         self.level = prams.get('level', 1)
         self.if_crontab = prams.get('if_crontab', False)
@@ -453,36 +461,33 @@ class Xalpha:
         delta = sig / vol
         return delta
 
+
+    @staticmethod
+    def table_exists(cursor, table_name):
+        """
+        检查表是否存在
+        """
+        cursor.execute(f"SHOW TABLES LIKE '{table_name}'")
+        return cursor.fetchone() is not None
+
     def report_stats(self):
         FACTOR_VALUES_PATH_NEW = os.path.join(FACTOR_VALUES_PATH, f"{self.name}.parquet")
-        if FACTOR_VALUES_PATH_NEW is None:
+        if not os.path.exists(FACTOR_VALUES_PATH_NEW):
             indicator_dict = self.run()
             print(f"Indicator dictionary for {self.name} is not saved.")
-            
         else:
             indicator_dict = pd.read_parquet(FACTOR_VALUES_PATH_NEW)
             print(f"Indicator dictionary for {self.name} is saved.")
         
         if isinstance(indicator_dict, dict) and 'indicator' not in indicator_dict:
             raise ValueError("Indicator dictionary is not properly structured.")
-        # if self.run_mode == 'all' or self.run_mode == 'recent':
-        #     self.start_date = self.start_date
-        #     self.end_date = self.end_date
-        #     self.mask = self.mask.loc[self.start_date:self.end_date]
-        # else:
-        #     # s
-   
-        #     self.start_date = indicator_dict.index[0][0]
-        #     self.end_date = indicator_dict.index[-1][0]
-        #     self.mask = self.univ.loc[indicator_dict.index].replace(False, np.nan)
-        # sig = (indicator_dict['indicator'] * self.mask).loc[self.start_date:self.end_date]
+
+        # 计算各项指标
         sig = (indicator_dict * self.mask).loc[self.start_date:self.end_date]
-        # sig = (indicator_dict * self.mask)
         raw_pnl = (sig * self.ret_1lag).sum(1)
         vol = raw_pnl.loc[self.rolling_start:self.rolling_end].std()
         delta = sig / vol
         pnl = (delta * self.mask.loc[self.start_date:self.end_date] * self.ret_1lag.loc[self.start_date:self.end_date]).sum(1)
-        # pnl = (delta * self.mask* self.ret_1lag).sum(1)
         pnl = pnl.astype(float)
         turnover = delta.diff().abs().sum(1)
         pot = pnl.sum() / turnover.sum() * 10000
@@ -496,22 +501,9 @@ class Xalpha:
         ypnl = raw_pnl.mean() * (288 / freq_hours) * 365
         sharpe = pnl.mean() / pnl.std() * np.sqrt((288 / freq_hours) * 365)
         benchmark = self.ret_1lag.loc[self.start_date:self.end_date].mean(1)
-        # benchmark = self.ret_1lag.mean(1)
         gmv = delta.abs().sum(1)
         max_leverage_ratio = gmv.max() / gmv.mean()
 
-        print({
-            'pot': pot,
-            'hd': hd,
-            'mdd': mdd,
-            'wratio': wratio,
-            'ir': ir,
-            'ypnl': ypnl,
-            'sharpe': sharpe,
-            'max_leverage_ratio': max_leverage_ratio,
-            'raw_pnl': raw_pnl,
-            'ic': ic
-        })
         value_start_date = indicator_dict.index[0][0]
         value_end_date = indicator_dict.index[-1][0]
         stats_path = STATS_PATH
@@ -520,35 +512,129 @@ class Xalpha:
 
         current_datetime = pd.Timestamp.now().strftime('%Y-%m-%d %H:%M:%S')
         stats_data = {
-            'name': [self.name],
-            'level': [self.level],
-            'update_time': [current_datetime],
-            'type': [self.type],
-            'if_prod': [self.if_prod],
-            'start_date': [value_start_date.strftime('%Y-%m-%d')],
-            'end_date': [value_end_date.strftime('%Y-%m-%d')],
-            'frequency': [self.fre],
-            'pot': [pot],
-            'hd': [hd],
-            'mdd': [mdd],
-            'wratio': [wratio],
-            'ir': [ir],
-            'ypnl': [ypnl],
-            'max_leverage_ratio': [max_leverage_ratio],
-            'sharpe': [sharpe],
-            'if_crontab': [self.if_crontab],
-            'out_sample_date': [self.out_sample_date.strftime('%Y-%m-%d')],
-            'factor_value_path': [FACTOR_VALUES_PATH_NEW],
-            'factor_code_path': [os.path.join(FACTOR_CODE_PATH, f"{self.name}.py")],
-            'intermediate_path': [os.path.join(INTERMEDIATE_PATH, f"{self.name}.parquet")]
+            'datetime': current_datetime,
+            'name': self.name,
+            'level': self.level,
+            'update_time': current_datetime,
+            'factortype': self.factortype,
+            'if_prod': self.if_prod,
+            'start_date': value_start_date.strftime('%Y-%m-%d'),
+            'end_date': value_end_date.strftime('%Y-%m-%d'),
+            'frequency': self.fre,
+            'pot': float(pot),
+            'hd': float(hd),
+            'mdd': float(mdd),
+            'wratio': float(wratio),
+            'ir': float(ir),
+            'ypnl': float(ypnl),
+            'sharpe': float(sharpe),
+            'max_leverage_ratio': float(max_leverage_ratio),
+            'if_crontab': self.if_crontab,
+            'out_sample_date': self.out_sample_date,
+            'factor_value_path': FACTOR_VALUES_PATH_NEW,
+            'factor_code_path': os.path.join(FACTOR_CODE_PATH, f"{self.name}.py"),
+            'intermediate_path': os.path.join(INTERMEDIATE_PATH, f"{self.name}.parquet")
         }
-        stats_df = pd.DataFrame(stats_data)
+        try:
+            cnx = mysql.connector.connect(**db_config)
+            cursor = cnx.cursor()
 
-        if not os.path.exists(stats_path):
-            stats_df.to_csv(stats_path, index=False)
-        else:
-            stats_df.to_csv(stats_path, mode='a', header=False, index=False)
+            # 确保表存在
+            if not self.table_exists(cursor, 'backtest_result'):
+                cursor.execute(create_backtest_result_table)
+                print("表 'backtest_result' 已创建。")
+            else:
+                print("表 'backtest_result' 已存在，无需创建。")
 
+            # 检查是否已存在相同的 name
+            cursor.execute("SELECT * FROM backtest_result WHERE name = %s", (stats_data['name'],))
+            existing_record = cursor.fetchone()
+            if existing_record:
+                print(f"记录已存在: {existing_record}")
+
+            # 使用 INSERT ... ON DUPLICATE KEY UPDATE
+            insert_update_query = """
+            INSERT INTO backtest_result (
+                datetime, name, level, update_time, factortype, if_prod, start_date, end_date, 
+                frequency, pot, hd, mdd, wratio, ir, ypnl, sharpe, max_leverage_ratio,
+                if_crontab, out_sample_date, factor_value_path, factor_code_path, intermediate_path
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            ON DUPLICATE KEY UPDATE
+                datetime = VALUES(datetime),
+                level = VALUES(level),
+                update_time = VALUES(update_time),
+                factortype = VALUES(factortype),
+                if_prod = VALUES(if_prod),
+                start_date = VALUES(start_date),
+                end_date = VALUES(end_date),
+                frequency = VALUES(frequency),
+                pot = VALUES(pot),
+                hd = VALUES(hd),
+                mdd = VALUES(mdd),
+                wratio = VALUES(wratio),
+                ir = VALUES(ir),
+                ypnl = VALUES(ypnl),
+                sharpe = VALUES(sharpe),
+                max_leverage_ratio = VALUES(max_leverage_ratio),
+                if_crontab = VALUES(if_crontab),
+                out_sample_date = VALUES(out_sample_date),
+                factor_value_path = VALUES(factor_value_path),
+                factor_code_path = VALUES(factor_code_path),
+                intermediate_path = VALUES(intermediate_path)
+            """
+            try:
+                cursor.execute(insert_update_query, (
+                    stats_data['datetime'],
+                    stats_data['name'],
+                    stats_data['level'],
+                    stats_data['update_time'],
+                    stats_data['factortype'],
+                    stats_data['if_prod'],
+                    stats_data['start_date'],
+                    stats_data['end_date'],
+                    stats_data['frequency'],
+                    stats_data['pot'],
+                    stats_data['hd'],
+                    stats_data['mdd'],
+                    stats_data['wratio'],
+                    stats_data['ir'],
+                    stats_data['ypnl'],
+                    stats_data['sharpe'],
+                    stats_data['max_leverage_ratio'],
+                    stats_data['if_crontab'],
+                    stats_data['out_sample_date'],
+                    stats_data['factor_value_path'],
+                    stats_data['factor_code_path'],
+                    stats_data['intermediate_path']
+                ))
+                print("SQL 语句执行成功")
+            except mysql.connector.Error as err:
+                print(f"SQL 语句执行失败: {err}")
+
+            cnx.commit()
+            print("事务已提交")
+
+            if cnx.is_connected():
+                print("数据库连接仍然有效")
+            else:
+                print("数据库连接已断开")
+
+        except mysql.connector.Error as err:
+            if err.errno == errorcode.ER_ACCESS_DENIED_ERROR:
+                print("错误: 用户名或密码错误。")
+            elif err.errno == errorcode.ER_BAD_DB_ERROR:
+                print("错误: 数据库不存在。")
+            elif err.errno == errorcode.ER_TABLE_EXISTS_ERROR:
+                print("错误: 表已存在。")
+            else:
+                print(f"发生错误: {err}")
+        finally:
+            if 'cursor' in locals():
+                cursor.close()
+            if 'cnx' in locals() and cnx.is_connected():
+                cnx.close()
+
+        # 继续保存中间数据到Parquet文件
         intermediate_dir = INTERMEDIATE_PATH
         os.makedirs(intermediate_dir, exist_ok=True)
         intermediate_df = pd.concat([pnl, raw_pnl, gmv, ic, benchmark], axis=1)
@@ -556,7 +642,7 @@ class Xalpha:
         
         if not intermediate_df.index.is_monotonic_increasing:
             intermediate_df = intermediate_df.sort_index()
-
+        
         intermediate_df = intermediate_df.loc[self.start_date:self.end_date]
         
         if not intermediate_df.index.is_monotonic_increasing:
@@ -565,6 +651,7 @@ class Xalpha:
         intermediate_path = os.path.join(INTERMEDIATE_PATH, f"{self.name}.parquet")
         intermediate_df.to_parquet(intermediate_path, index=True)
 
+        # 返回统计数据
         stats = {
             'pot': pot,
             'hd': hd,
@@ -580,13 +667,12 @@ class Xalpha:
             'benchmark': benchmark
         }
         return stats
-
-    def report_plot(self, stats, plot=False, savefig=False, path=IMAGE_PATH, full_title=""):
+    
+    def report_plot(self, stats, author, plot=False, savefig=False, path=IMAGE_PATH, full_title=""):
         if not plot:
             return
 
-        import matplotlib.pyplot as plt
-        import matplotlib.ticker as ticker
+
 
         intermediate_path = os.path.join(INTERMEDIATE_PATH, f"{self.name}.parquet")
         if not os.path.exists(intermediate_path):
@@ -659,10 +745,15 @@ class Xalpha:
         
         fig2.tight_layout(rect=[0, 0, 1, 0.95])
         path = IMAGE_PATH
+        shared_path = os.path.join(SHARED_PATH, author, 'image')
 
         if savefig:
             os.makedirs(path, exist_ok=True) 
             fig1.savefig(f'{path}/{full_title}_ic_pnl.png')
             fig2.savefig(f'{path}/{full_title}_gmv_benchmark.png')
+
+            os.makedirs(shared_path, exist_ok=True)
+            fig1.savefig(f'{shared_path}/{full_title}_ic_pnl.png')
+            fig2.savefig(f'{shared_path}/{full_title}_gmv_benchmark.png')
         
         plt.show()

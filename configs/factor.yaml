@@ -1,10 +1,10 @@
 # configs/factor.yaml
 factors:
-  - name: xy
+  - name: xy1
     pre_lag: 6 # 第一个数据点需要的时间长度, 默认为1000, 单位是frequency参数频率下的, bar数量，建议不要于bar_lag差距过大，会降低计算效率
     bar_lag: 5  # rolling时每一个数据点需要的时间长度
-    frequency: '4h'  # '10m', '15m', '30m', '1h',  '4h', '6h', '8h', '1d'
-    run_mode: 'recent' # 'all', 'recent', 'online'
+    frequency: '1h'  # '10m', '15m', '30m', '1h',  '4h', '6h', '8h', '1d'
+    run_mode: 'all' # 'all', 'recent', 'online'
     start_date: '2024-01-01'  # 开始时间, 只对run_mode='all'有效
     end_date: '2025-01-01'    # 结束时间, 只对run_mode='all'有效
     # if_addition: true       # online模式下需要为true, 其他无所谓，填不填都行
@@ -17,16 +17,16 @@ factors:
     # depend_factor_field:     # 以来的前置因子的名称，使用时首先要确保前置因子已经计算完毕
     #   - 'xy'
     #   - 'xy1'
-    type: 'pv'
+    factortype: 'pv'
+    author: 'yzl' ## boxu, gt 必须按这样填写, 会去区分路径
     if_prod: False
     level: 1
     if_crontab: False
     out_sample_date: '2024-01-01'
 
-
-  
   
 
+  
   # - name: xy3
   #   pre_lag: 6
   #   bar_lag: 5

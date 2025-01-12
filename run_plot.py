@@ -4,30 +4,41 @@ import yaml
 import argparse
 import os
 from xalpha import Xalpha
+import pandas as pd
 from configs.syspath import (BASE_PATH, DATA_PATH, UNIVERSE_PATH, FACTOR_VALUES_PATH,
                                 BACKTEST_PATH, IMAGE_PATH, INTERMEDIATE_PATH, STATS_PATH)
-import pandas as pd
+from utils.db_connector import fetch_latest_stats_from_db
+factor_config_path = os.path.join(BASE_PATH, 'configs', 'factor.yaml')
 
 def run_plot(params):
     print("getting params in run_plot")
-    
+
     simulator = Xalpha(params)
-    print ("running plot")
+    print("running plot")
     factor_name = params['name']
-    stats_df = pd.read_csv(STATS_PATH)
-    latest_stats = stats_df[stats_df['name'] == factor_name].iloc[-1].to_dict()
+    author = params['author']
+    # 从数据库中获取最新记录
+    latest_stats = fetch_latest_stats_from_db(factor_name)
+    if not latest_stats:
+        print(f"未找到因子 '{factor_name}' 的记录")
+        return
+
+    # 调用 report_plot 方法
     simulator.report_plot(
         stats=latest_stats,
+        author = author,
         plot=True,
         savefig=True,
         path=IMAGE_PATH,
         full_title=f"{params['name']}_{params['frequency']}"
     )
 
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Run plotting for a specific factor.')
     parser.add_argument('--name', type=str, required=True, help='Name of the factor to plot.')
-    parser.add_argument('--config', type=str, default='configs/config.yaml', help='Path to the config YAML file.')
+    parser.add_argument('--config', type=str, default=factor_config_path, help='Path to the config YAML file.')
     args = parser.parse_args()
 
     start_time = time.time()
@@ -59,3 +70,4 @@ if __name__ == "__main__":
     end_time = time.time()
     total_time = end_time - start_time
     print(f"run_plot.py Total script runtime: {total_time:.2f} seconds")
+

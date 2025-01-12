@@ -3,21 +3,25 @@ import time
 import yaml
 import argparse
 from xalpha import Xalpha
+import os
+import pandas as pd
 from configs.syspath import (BASE_PATH, DATA_PATH, UNIVERSE_PATH, FACTOR_VALUES_PATH,
                                 BACKTEST_PATH, IMAGE_PATH, INTERMEDIATE_PATH, STATS_PATH)
-import os 
-import pandas as pd
+FACTOR_CONFIG_PATH = os.path.join(BASE_PATH, 'configs', 'factor.yaml')
+
+
 def run_backtest(params):
     print("getting params in run_backtest")
     simulator = Xalpha(params)
     print ("running backtest")
     stats = simulator.report_stats()
+
     return stats
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Run backtest for a specific factor.')
     parser.add_argument('--name', type=str, required=True, help='Name of the factor to run backtest.')
-    parser.add_argument('--config', type=str, default='configs/config.yaml', help='Path to the config YAML file.')
+    parser.add_argument('--config', type=str, default=FACTOR_CONFIG_PATH, help='Path to the config YAML file.')
     args = parser.parse_args()
 
     start_time = time.time()
@@ -45,7 +49,7 @@ if __name__ == "__main__":
         raise ValueError(f"Error extracting dates from index: {e}")
     
     # 更新 factor_params
-    factor_params['start_date'] = str(start_date)  # 转换为字符串格式
+    factor_params['start_date'] = str(start_date)  # 转换为字符串
     factor_params['end_date'] = str(end_date)
     factor_params['run_mode'] = 'all'
     

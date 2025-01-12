@@ -3,7 +3,10 @@ import time
 import yaml
 import argparse
 from xalpha import Xalpha
-
+import os
+from configs.syspath import (BASE_PATH, DATA_PATH, UNIVERSE_PATH, FACTOR_VALUES_PATH,
+                                BACKTEST_PATH, IMAGE_PATH, INTERMEDIATE_PATH, STATS_PATH)
+factor_config_path = os.path.join(BASE_PATH, 'configs', 'factor.yaml')
 def run_factor(params):
     print("getting params in run_factor")
     simulator = Xalpha(params)
@@ -14,7 +17,7 @@ def run_factor(params):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Run factor computation for a specific factor.')
     parser.add_argument('--name', type=str, required=True, help='Name of the factor to compute.')
-    parser.add_argument('--config', type=str, default='configs/config.yaml', help='Path to the config YAML file.')
+    parser.add_argument('--config', type=str, default= factor_config_path, help='Path to the config YAML file.')
     args = parser.parse_args()
 
     start_time = time.time()
