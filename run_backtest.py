@@ -49,7 +49,7 @@ if __name__ == "__main__":
         raise ValueError(f"Error extracting dates from index: {e}")
     
     # 更新 factor_params
-    factor_params['start_date'] = str(start_date)  # 转换为字符串格式
+    factor_params['start_date'] = str(start_date)  # 转换为字符串
     factor_params['end_date'] = str(end_date)
     factor_params['run_mode'] = 'all'
     
