@@ -30,3 +30,4 @@
     2. `image` 回测绘图
     3. `intermediate` 绘图用到的中间数据
 3. 日志信息在 `logs` 中
+3. streamlit 链接: `http://192.168.137.4:8502/`

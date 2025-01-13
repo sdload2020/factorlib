@@ -16,7 +16,7 @@ def fetch_latest_stats_from_db(factor_name):
         query = """
         SELECT * FROM backtest_result 
         WHERE name = %s 
-        ORDER BY datetime DESC 
+        ORDER BY updatetime DESC 
         LIMIT 1
         """
         cursor.execute(query, (factor_name,))
