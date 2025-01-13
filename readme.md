@@ -63,3 +63,45 @@
     ```bash
     pip install <package_name>
     ```
+
+## 仓库操作指南
+
+### 步骤 1：克隆仓库
+首先，克隆远程仓库到本地。这是你第一次获取代码时的操作。
+
+```bash
+git clone git@github.com:sdload2020/factorlib.git
+```
+
+这会将远程仓库的所有文件下载到本地。
+
+### 步骤 2：进入仓库目录
+进入到克隆下来的仓库目录。
+
+```bash
+cd factorlib
+```
+
+### 步骤 3：配置远程仓库的 origin
+当你克隆仓库时，Git 会自动设置远程仓库为 origin。你可以通过以下命令检查远程仓库设置：
+
+```bash
+git remote -v
+```
+
+这应该会显示如下内容（以 origin 为例）：
+
+```bash
+origin  git@github.com:sdload2020/factorlib.git (fetch)
+origin  git@github.com:sdload2020/factorlib.git (push)
+```
+
+### 步骤 4：拉取远程更新
+当你想从远程仓库拉取最新的更新时，可以使用 `git pull` 命令：
+
+```bash
+git pull origin master
+```
+
+
+
