@@ -512,10 +512,10 @@ class Xalpha:
 
         current_datetime = pd.Timestamp.now().strftime('%Y-%m-%d %H:%M:%S')
         stats_data = {
-            'datetime': current_datetime,
             'name': self.name,
             'level': self.level,
-            'update_time': current_datetime,
+            'author': self.author,
+            'updatetime': current_datetime,
             'factortype': self.factortype,
             'if_prod': self.if_prod,
             'start_date': value_start_date.strftime('%Y-%m-%d'),
@@ -546,8 +546,11 @@ class Xalpha:
             else:
                 print("表 'backtest_result' 已存在，无需创建。")
 
-            # 检查是否已存在相同的 name
-            cursor.execute("SELECT * FROM backtest_result WHERE name = %s", (stats_data['name'],))
+            # 检查是否已存在相同的 name, author, frequency 记录
+            # cursor.execute("SELECT * FROM backtest_result WHERE name = %s", (stats_data['name'],))
+
+            cursor.execute("SELECT * FROM backtest_result WHERE name = %s AND author = %s AND frequency = %s", 
+                        (stats_data['name'], stats_data['author'], stats_data['frequency']))
             existing_record = cursor.fetchone()
             if existing_record:
                 print(f"记录已存在: {existing_record}")
@@ -555,14 +558,14 @@ class Xalpha:
             # 使用 INSERT ... ON DUPLICATE KEY UPDATE
             insert_update_query = """
             INSERT INTO backtest_result (
-                datetime, name, level, update_time, factortype, if_prod, start_date, end_date, 
-                frequency, pot, hd, mdd, wratio, ir, ypnl, sharpe, max_leverage_ratio,
-                if_crontab, out_sample_date, factor_value_path, factor_code_path, intermediate_path
+                name, frequency, updatetime, factortype, level, if_prod, start_date, end_date, 
+                pot, hd, mdd, wratio, ir, ypnl, sharpe, max_leverage_ratio,
+                if_crontab, out_sample_date, author, factor_value_path, factor_code_path, intermediate_path
             ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             ON DUPLICATE KEY UPDATE
-                datetime = VALUES(datetime),
                 level = VALUES(level),
-                update_time = VALUES(update_time),
+                author = VALUES(author),
+                updatetime = VALUES(updatetime),
                 factortype = VALUES(factortype),
                 if_prod = VALUES(if_prod),
                 start_date = VALUES(start_date),
@@ -584,15 +587,14 @@ class Xalpha:
             """
             try:
                 cursor.execute(insert_update_query, (
-                    stats_data['datetime'],
                     stats_data['name'],
-                    stats_data['level'],
-                    stats_data['update_time'],
+                    stats_data['frequency'],
+                    stats_data['updatetime'],
                     stats_data['factortype'],
+                    stats_data['level'],
                     stats_data['if_prod'],
                     stats_data['start_date'],
                     stats_data['end_date'],
-                    stats_data['frequency'],
                     stats_data['pot'],
                     stats_data['hd'],
                     stats_data['mdd'],
@@ -603,6 +605,7 @@ class Xalpha:
                     stats_data['max_leverage_ratio'],
                     stats_data['if_crontab'],
                     stats_data['out_sample_date'],
+                    stats_data['author'],
                     stats_data['factor_value_path'],
                     stats_data['factor_code_path'],
                     stats_data['intermediate_path']
