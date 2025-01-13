@@ -64,7 +64,7 @@ if __name__ == "__main__":
     factor_params['end_date'] = str(end_date)
     factor_params['run_mode'] = 'all'
     
-    print(f"Updated factor_params: {factor_params}")
+    # print(f"Updated factor_params: {factor_params}")
     run_plot(factor_params)
     
     end_time = time.time()

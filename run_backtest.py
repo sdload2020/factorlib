@@ -53,9 +53,8 @@ if __name__ == "__main__":
     factor_params['end_date'] = str(end_date)
     factor_params['run_mode'] = 'all'
     
-    print(f"Updated factor_params: {factor_params}")
+    # print(f"Updated factor_params: {factor_params}")
     performance_stats = run_backtest(factor_params)
-    print(performance_stats)
     end_time = time.time()
     total_time = end_time - start_time
     print(f"run_backtest.py Total script runtime: {total_time:.2f} seconds")

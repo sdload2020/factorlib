@@ -18,7 +18,7 @@ factors:
     #   - 'xy'
     #   - 'xy1'
     factortype: 'pv'
-    author: 'test' ## boxu, gt, yzl 必须按这样填写, 会去区分路径, 正确填写不然会报错
+    author: 'yzl' ## boxu, gt, yzl 必须按这样填写, 会去区分路径, 正确填写不然会报错
     if_prod: False  ## 是否上线
     level: 1  ## 层级，依赖原始数据的为1，依赖1级因子的为2，以此类推
     if_crontab: False  ## 是否配置cron定时任务
@@ -43,7 +43,7 @@ factors:
     #   - 'xy'
     #   - 'xy1'
     factortype: 'pv'
-    author: 'test' ## boxu, gt, yzl 必须按这样填写, 会去区分路径, 正确填写不然会报错
+    author: 'yzl' ## boxu, gt, yzl 必须按这样填写, 会去区分路径, 正确填写不然会报错
     if_prod: False  ## 是否上线
     level: 1  ## 层级，依赖原始数据的为1，依赖1级因子的为2，以此类推
     if_crontab: False  ## 是否配置cron定时任务

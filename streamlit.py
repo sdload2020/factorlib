@@ -29,8 +29,8 @@ logger.info("Streamlit 页面启动。")
 # 页面标题
 st.title("因子回测结果")
 
-# 自动刷新，每60秒刷新一次
-count = st_autorefresh(interval=60000, key="auto_refresh")
+# 自动刷新，每600秒刷新一次
+count = st_autorefresh(interval=600000, key="auto_refresh")
 
 # 手动刷新按钮
 if st.button("手动刷新"):
@@ -43,7 +43,7 @@ last_refresh_time = datetime.now(tz).strftime("%Y-%m-%d %H:%M:%S")
 st.write(f"上次刷新时间: {last_refresh_time}")
 
 # 从数据库获取回测数据
-@st.cache_data(ttl=300)
+# @st.cache_data(ttl=300)
 def get_backtest_data():
     try:
         cnx = mysql.connector.connect(**db_config)
@@ -71,26 +71,12 @@ if not df.empty:
 else:
     st.info("暂无回测数据。")
 
+
+IMAGE_PATH_xubo = os.path.join(SHARED_PATH, "xubo", "factorlib", "backtest","image")
+IMAGE_PATH_yzl = os.path.join(SHARED_PATH, "yzl", "factorlib", "backtest", "image")
+IMAGE_PATH_gt = os.path.join(SHARED_PATH, "gt", "factorlib", "backtest", "image")
 # 获取因子图像
 # @st.cache_data(ttl=300)
-# def get_factor_images():
-#     ic_files = glob(os.path.join(IMAGE_PATH, "*_ic_pnl.png"))
-#     factor_imgs = {}
-#     for ic in ic_files:
-#         base = os.path.basename(ic)
-#         factor_title = base.replace("_ic_pnl.png", "")
-#         gmv_path = os.path.join(IMAGE_PATH, f"{factor_title}_gmv_benchmark.png")
-#         if os.path.exists(gmv_path):
-#             factor_imgs[factor_title] = (ic, gmv_path)
-#     logger.info(f"找到 {len(factor_imgs)} 个因子的图像。")
-#     return factor_imgs
-
-# three different image paths
-IMAGE_PATH_xubo = os.path.join(SHARED_PATH, "xubo", "image")
-IMAGE_PATH_yzl = os.path.join(SHARED_PATH, "yzl", "image")
-IMAGE_PATH_gt = os.path.join(SHARED_PATH, "gt", "image")
-# 获取因子图像
-@st.cache_data(ttl=300)
 def get_factor_images():
     factor_imgs = {}
     for image_path in [IMAGE_PATH_xubo, IMAGE_PATH_yzl, IMAGE_PATH_gt]:
