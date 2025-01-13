@@ -5,8 +5,8 @@ from datetime import timedelta
 from tqdm import tqdm
 import os
 import time
-from configs.syspath import (BASE_PATH, DATA_PATH, UNIVERSE_PATH, FACTOR_VALUES_PATH,
-                                BACKTEST_PATH, IMAGE_PATH, INTERMEDIATE_PATH, STATS_PATH, FACTOR_CODE_PATH, SHARED_PATH)
+from configs.syspath import (BASE_PATH, DATA_PATH, UNIVERSE_PATH,
+                                BACKTEST_PATH, IMAGE_PATH, STATS_PATH, FACTOR_CODE_PATH, SHARED_PATH)
 import importlib
 import mysql.connector
 from configs.dbconfig import db_config
@@ -96,13 +96,14 @@ class Xalpha:
         self.composite_method = prams.get('composite_method', False)
         self.depend_factor_field = prams.get('depend_factor_field', None)
         self.author = prams.get('author', 'Unknown')
-        #
-        # type: 'pv'
-        # if_prod: 'False'
-        # level: 1
-        # if_crontab: 'False'
-        # addition_start_date: '2024-01-01'
 
+        # define the FACTOR_VALUES_PATH as a global variable
+        global FACTOR_VALUES_PATH
+        FACTOR_VALUES_PATH = os.path.join(SHARED_PATH, self.author, 'factorlib', 'factor_values')
+        os.makedirs(FACTOR_VALUES_PATH, exist_ok=True)
+        global INTERMEDIATE_PATH
+        INTERMEDIATE_PATH = os.path.join(SHARED_PATH, self.author, 'factorlib', 'backtest', 'intermediate')
+        os.makedirs(INTERMEDIATE_PATH, exist_ok=True)
         self.factortype = prams.get('factortype', None)
         self.if_prod = prams.get('if_prod', False)
         self.level = prams.get('level', 1)
@@ -748,7 +749,7 @@ class Xalpha:
         
         fig2.tight_layout(rect=[0, 0, 1, 0.95])
         path = IMAGE_PATH
-        shared_path = os.path.join(SHARED_PATH, author, 'image')
+        shared_path = os.path.join(SHARED_PATH, author, 'factorlib','backtest', 'image')
 
         if savefig:
             os.makedirs(path, exist_ok=True) 
