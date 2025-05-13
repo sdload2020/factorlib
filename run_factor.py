@@ -2,14 +2,14 @@
 import time
 import yaml
 import argparse
-from xalpha import Xalpha
+from calc_alpha import AlphaCalc
 import os
 from configs.syspath import (BASE_PATH, DATA_PATH, UNIVERSE_PATH, FACTOR_VALUES_PATH,
                                 BACKTEST_PATH, IMAGE_PATH, INTERMEDIATE_PATH, STATS_PATH)
 factor_config_path = os.path.join(BASE_PATH, 'configs', 'factor.yaml')
 def run_factor(params):
     print("getting params in run_factor")
-    simulator = Xalpha(params)
+    simulator = AlphaCalc(params)
     print ("running factor")
     indicator_dict = simulator.run()
     return indicator_dict

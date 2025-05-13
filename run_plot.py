@@ -3,9 +3,9 @@ import time
 import yaml
 import argparse
 import os
-from xalpha import Xalpha
+from calc_alpha import AlphaCalc
 import pandas as pd
-from configs.syspath import (BASE_PATH, DATA_PATH, UNIVERSE_PATH, FACTOR_VALUES_PATH,
+from configs.syspath import (BASE_PATH, DATA_PATH, UNIVERSE_PATH, SHARED_PATH,
                                 BACKTEST_PATH, IMAGE_PATH, INTERMEDIATE_PATH, STATS_PATH)
 from utils.db_connector import fetch_latest_stats_from_db
 factor_config_path = os.path.join(BASE_PATH, 'configs', 'factor.yaml')
@@ -13,7 +13,7 @@ factor_config_path = os.path.join(BASE_PATH, 'configs', 'factor.yaml')
 def run_plot(params):
     print("getting params in run_plot")
 
-    simulator = Xalpha(params)
+    simulator = AlphaCalc(params)
     print("running plot")
     factor_name = params['name']
     author = params['author']
@@ -47,6 +47,8 @@ if __name__ == "__main__":
     factor_params = next((f for f in config['factors'] if f['name'] == args.name), None)
     if factor_params is None:
         raise ValueError(f"Factor {args.name} not found in the config file.")
+    author = factor_params['author']
+    FACTOR_VALUES_PATH = os.path.join(SHARED_PATH, author, 'factorlib', 'factor_values')
     factor_values_path_new = os.path.join(FACTOR_VALUES_PATH, f"{args.name}.parquet")
     if not os.path.exists(factor_values_path_new):
         raise FileNotFoundError(f"Parquet file not found: {factor_values_path_new}")
