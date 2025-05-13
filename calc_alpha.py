@@ -1,4 +1,4 @@
-# xalpha.py
+# calc_alpha.py
 import pandas as pd
 import numpy as np
 from datetime import timedelta
@@ -68,7 +68,7 @@ def rescale(dft, fre, bar_fields, require_last=True):
 
     return resd
 
-class Xalpha:
+class AlphaCalc:
     freq_hours_map = {
         '5m':  5 / 60,
         '10m': 10 / 60,
@@ -496,10 +496,12 @@ class Xalpha:
         hd = delta.abs().sum(axis=1).mean() / turnover.mean() * 2 * freq_hours / 288
         mdd = abs((pnl.cumsum() - pnl.cumsum().expanding().max()).min())
         wratio = (pnl > 0).astype(int).sum() / (len(pnl) * 1.0)
-        ic = self.ret_1lag.corrwith(sig, axis=1, drop=True)
+        valid_idx = (self.ret_1lag.std(axis=1) != 0) & (sig.std(axis=1) != 0)
+        ic = self.ret_1lag.loc[valid_idx].corrwith(sig.loc[valid_idx], axis=1, drop=True)
+        # ic = self.ret_1lag.corrwith(sig, axis=1, drop=True)
         ic_mean = ic.mean()
         ir = ic_mean / ic.std()
-        ypnl = raw_pnl.mean() * (288 / freq_hours) * 365
+        ypnl = pnl.mean() * (288 / freq_hours) * 365
         sharpe = pnl.mean() / pnl.std() * np.sqrt((288 / freq_hours) * 365)
         benchmark = self.ret_1lag.loc[self.start_date:self.end_date].mean(1)
         gmv = delta.abs().sum(1)

@@ -1,0 +1,5 @@
+tmux new -s streamlit_app
+streamlit run
+tmux ls
+tmux attach -t streamlit_app
+tmux kill-session -t streamlit_app
