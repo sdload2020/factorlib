@@ -6,7 +6,7 @@ from tqdm import tqdm
 import os
 import time
 from configs.syspath import (BASE_PATH, DATA_PATH, UNIVERSE_PATH,
-                                BACKTEST_PATH, IMAGE_PATH, STATS_PATH, FACTOR_CODE_PATH, SHARED_PATH)
+                                BACKTEST_PATH, IMAGE_PATH, STATS_PATH, FACTOR_CODE_PATH, SHARED_PATH, INTERMEDIATE_PATH, FACTOR_VALUES_PATH)
 import importlib
 import mysql.connector
 from configs.dbconfig import db_config
@@ -96,14 +96,16 @@ class AlphaCalc:
         self.composite_method = prams.get('composite_method', False)
         self.depend_factor_field = prams.get('depend_factor_field', None)
         self.author = prams.get('author', 'Unknown')
-
+      
         # define the FACTOR_VALUES_PATH as a global variable
-        global FACTOR_VALUES_PATH
-        FACTOR_VALUES_PATH = os.path.join(SHARED_PATH, self.author, 'factorlib', 'factor_values')
-        os.makedirs(FACTOR_VALUES_PATH, exist_ok=True)
-        global INTERMEDIATE_PATH
-        INTERMEDIATE_PATH = os.path.join(SHARED_PATH, self.author, 'factorlib', 'backtest', 'intermediate')
-        os.makedirs(INTERMEDIATE_PATH, exist_ok=True)
+        # global FACTOR_VALUES_PATH
+        # FACTOR_VALUES_PATH = os.path.join(SHARED_PATH, self.author, 'factorlib', 'factor_values')
+        self.factor_values_path = FACTOR_VALUES_PATH
+        os.makedirs(self.factor_values_path, exist_ok=True)
+        # global INTERMEDIATE_PATH
+        # INTERMEDIATE_PATH = os.path.join(SHARED_PATH, self.author, 'factorlib', 'backtest', 'intermediate')
+        self.intermediate_path = INTERMEDIATE_PATH
+        os.makedirs(self.intermediate_path, exist_ok=True)
         self.factortype = prams.get('factortype', None)
         self.if_prod = prams.get('if_prod', False)
         self.level = prams.get('level', 1)
@@ -167,7 +169,7 @@ class AlphaCalc:
             if self.composite_method:
                 factor_data = {}
                 for key in self.depend_factor_field:
-                    factor_path = os.path.join(FACTOR_VALUES_PATH, f"{key}.parquet")
+                    factor_path = os.path.join(self.factor_values_path, f"{key}.parquet")
                     if not os.path.exists(factor_path):
                         raise FileNotFoundError(f"Dependent factor file '{key}' not found at {factor_path}")
                     df_factor = pd.read_parquet(factor_path)
@@ -180,7 +182,7 @@ class AlphaCalc:
                 missing_factors = [factor for factor in self.depend_factor_field if factor not in self.bar_dict]
                 if missing_factors:
                     for factor in missing_factors:
-                        factor_path = os.path.join(FACTOR_VALUES_PATH, f"{factor}.parquet")
+                        factor_path = os.path.join(self.factor_values_path, f"{factor}.parquet")
                         if not os.path.exists(factor_path):
                             raise FileNotFoundError(f"Dependent factor file '{factor}' not found at {factor_path}")
                         df_factor = pd.read_parquet(factor_path)
@@ -197,7 +199,7 @@ class AlphaCalc:
     def _set_dates_online(self, prams):
         if self.run_mode == 'online':
             factor_name = self.name
-            save_path = os.path.join(FACTOR_VALUES_PATH, f"{factor_name}.parquet")
+            save_path = os.path.join(self.factor_values_path, f"{factor_name}.parquet")
             if not os.path.exists(save_path):
                 raise FileNotFoundError(f"Factor file not found at {save_path} for 'online' run_mode.")
             existing_indicator_df = pd.read_parquet(save_path)
@@ -317,7 +319,7 @@ class AlphaCalc:
                 return self.run_result
         elif self.run_mode == 'online':
             factor_name = self.name
-            indicator_path = os.path.join(FACTOR_VALUES_PATH, f"{factor_name}.parquet")
+            indicator_path = os.path.join(self.factor_values_path, f"{factor_name}.parquet")
             if not os.path.exists(indicator_path):
                 return None
             try:
@@ -389,7 +391,7 @@ class AlphaCalc:
     def save_indicator_dict(self):
         from pandas import IndexSlice as idx
         factor_name = self.name
-        save_path = os.path.join(FACTOR_VALUES_PATH, f"{factor_name}.parquet")
+        save_path = os.path.join(self.factor_values_path, f"{factor_name}.parquet")
         indicator_df = self.indicator_dict['indicator']
         if not isinstance(indicator_df.index, pd.MultiIndex):
             raise ValueError("indicator_dict['indicator'] must have a MultiIndex with 'date' and 'Label'.")
@@ -472,7 +474,7 @@ class AlphaCalc:
         return cursor.fetchone() is not None
 
     def report_stats(self):
-        FACTOR_VALUES_PATH_NEW = os.path.join(FACTOR_VALUES_PATH, f"{self.name}.parquet")
+        FACTOR_VALUES_PATH_NEW = os.path.join(self.factor_values_path, f"{self.name}.parquet")
         if not os.path.exists(FACTOR_VALUES_PATH_NEW):
             indicator_dict = self.run()
             print(f"Indicator dictionary for {self.name} is not saved.")
@@ -683,7 +685,7 @@ class AlphaCalc:
         intermediate_path = os.path.join(INTERMEDIATE_PATH, f"{self.name}.parquet")
         if not os.path.exists(intermediate_path):
             raise FileNotFoundError(f"Intermediate data file not found at {intermediate_path}")
-        
+        os.makedirs(path, exist_ok=True)
         intermediate_df = pd.read_parquet(intermediate_path)
         
         if not intermediate_df.index.is_monotonic_increasing:
@@ -751,8 +753,8 @@ class AlphaCalc:
         
         fig2.tight_layout(rect=[0, 0, 1, 0.95])
         path = IMAGE_PATH
-        shared_path = os.path.join(SHARED_PATH, author, 'factorlib','backtest', 'image')
-
+        # shared_path = os.path.join(SHARED_PATH, author, 'factorlib','backtest', 'image')
+        shared_path = path
         if savefig:
             os.makedirs(path, exist_ok=True) 
             fig1.savefig(f'{path}/{full_title}_ic_pnl.png')

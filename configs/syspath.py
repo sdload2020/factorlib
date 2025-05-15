@@ -9,11 +9,12 @@ LOGS_PATH = os.path.join(BASE_PATH, 'logs')  # 日志文件路径
 FACTOR_CODE_PATH = os.path.join(BASE_PATH, 'factor_code')  # 因子计算代码路径
 DATA_PATH = os.path.join(RAWDATA_PATH, "pv_")
 UNIVERSE_PATH = os.path.join(RAWDATA_PATH, "pv_universe.parquet")
-FACTOR_VALUES_PATH = os.path.join(BASE_PATH, "factor_values")
 
-BACKTEST_PATH = os.path.join(BASE_PATH,  "backtest")
-IMAGE_PATH = os.path.join(BACKTEST_PATH, "image")
-INTERMEDIATE_PATH = os.path.join(BACKTEST_PATH, "intermediate")
+
+BACKTEST_PATH = os.path.join(BASE_PATH,  "result")
+FACTOR_VALUES_PATH = os.path.join(BACKTEST_PATH, "indicator")
+IMAGE_PATH = os.path.join(BACKTEST_PATH, "report","image")
+INTERMEDIATE_PATH = os.path.join(BACKTEST_PATH,"report", "intermediate")
 STATS_PATH = os.path.join(BACKTEST_PATH, "stats.csv")
 CONFIG_FILE = os.path.join(BASE_PATH, "configs", "factor.yaml")
 
