@@ -5,16 +5,22 @@ from datetime import timedelta
 from tqdm import tqdm
 import os
 import time
-from configs.syspath import (BASE_PATH, DATA_PATH, UNIVERSE_PATH,
+from factorlib.configs.syspath import (BASE_PATH, DATA_PATH, UNIVERSE_PATH,WORK_PATH,
                                 BACKTEST_PATH, IMAGE_PATH, STATS_PATH, FACTOR_CODE_PATH, SHARED_PATH, INTERMEDIATE_PATH, FACTOR_VALUES_PATH)
 import importlib
 import mysql.connector
-from configs.dbconfig import db_config
-from configs.tablecreator import create_backtest_result_table
+from factorlib.configs.dbconfig import db_config
+from factorlib.configs.tablecreator import create_backtest_result_table
 import datetime
 from mysql.connector import errorcode
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
+
+def load_external_module(module_name: str, path_to_py: str):
+    spec = importlib.util.spec_from_file_location(module_name, path_to_py)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 def rescale(dft, fre, bar_fields, require_last=True):
     fre2n = {
@@ -81,13 +87,20 @@ class AlphaCalc:
         '1d':  24
     }
 
+
     def __init__(self, prams: dict):
         required_keys = ['name', 'pre_lag', 'bar_lag', 'frequency', 'run_mode']
         for key in required_keys:
             if key not in prams:
                 raise KeyError(f"Missing required parameter: {key}")
         self.name = prams['name']
-        factor_module = importlib.import_module(f"factor_code.{self.name}")
+
+        module_path = os.path.join(WORK_PATH, 'factor',self.name+'.py')
+        print("module_path:"+module_path)
+        print("self.name:"+self.name)
+        factor_module = load_external_module(self.name, module_path)
+
+        #factor_module = importlib.import_module(f"factorlib.factor_code.{self.name}")
         self.initialize = getattr(factor_module, 'initialize')
         self.preprocess = getattr(factor_module, 'preprocess')
         self.handle_all = getattr(factor_module, 'handle_all')
@@ -285,6 +298,7 @@ class AlphaCalc:
 
     def run(self):
         if self.composite_method:
+            print("run:"+1)
             pass
         if self.run_mode == 'all':
             indicator_dict = self.handle_all(self.bar_dict)
@@ -475,6 +489,7 @@ class AlphaCalc:
 
     def report_stats(self):
         FACTOR_VALUES_PATH_NEW = os.path.join(self.factor_values_path, f"{self.name}.parquet")
+        print("FACTOR_VALUES_PATH_NEW:"+FACTOR_VALUES_PATH_NEW)
         if not os.path.exists(FACTOR_VALUES_PATH_NEW):
             indicator_dict = self.run()
             print(f"Indicator dictionary for {self.name} is not saved.")

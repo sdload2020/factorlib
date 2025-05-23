@@ -72,9 +72,9 @@ else:
     st.info("暂无回测数据。")
 
 
-IMAGE_PATH_xubo = os.path.join(SHARED_PATH, "xubo", "factorlib", "backtest","image")
-IMAGE_PATH_yzl = os.path.join(SHARED_PATH, "yzl", "factorlib", "backtest", "image")
-IMAGE_PATH_gt = os.path.join(SHARED_PATH, "gt", "factorlib", "backtest", "image")
+IMAGE_PATH_xubo = os.path.join(SHARED_PATH, "xubo", "factor_manage", "result","report","image")
+IMAGE_PATH_yzl = os.path.join(SHARED_PATH, "yzl", "factor_manage", "result","report","image")
+IMAGE_PATH_gt = os.path.join(SHARED_PATH, "gt", "factor_manage", "result","report","image")
 # 获取因子图像
 # @st.cache_data(ttl=300)
 def get_factor_images():
