@@ -5,8 +5,9 @@ import argparse
 import os
 from calc_alpha import AlphaCalc
 import pandas as pd
-from configs.syspath import (BASE_PATH, DATA_PATH, UNIVERSE_PATH, SHARED_PATH,
-                                BACKTEST_PATH, IMAGE_PATH, INTERMEDIATE_PATH, STATS_PATH)
+from pathlib import Path
+import ast
+from configs.syspath import (BASE_PATH, SHARED_PATH, IMAGE_PATH, FACTOR_CODE_PATH)
 from utils.db_connector import fetch_latest_stats_from_db
 factor_config_path = os.path.join(BASE_PATH, 'configs', 'factor.yaml')
 
@@ -34,13 +35,31 @@ def run_plot(params):
     )
 
 
-def main(name,configFile):
+def main(name):
     start_time = time.time()
-    with open(configFile, 'r') as f:
-        config = yaml.safe_load(f)
-    factor_params = next((f for f in config['factors'] if f['name'] == name), None)
+    
+    fileName = name + '.py'
+    path = Path(FACTOR_CODE_PATH)
+    for file_path in path.rglob('*.py'):  # 使用 rglob 递归匹配所有文件
+        if file_path.is_file():
+            if(file_path.name == fileName):
+                with open(file_path, 'r',encoding='utf-8') as f:
+                    source = f.read()
+                tree = ast.parse(source)
+                arrays = {}
+
+                for node in tree.body:
+                    if isinstance(node, ast.Assign):
+                        for target in node.targets:
+                            if isinstance(target, ast.Name) and target.id == 'config':
+                                arrays = ast.literal_eval(node.value)
+                                break
+
+
+    factor_params = next((f for f in arrays['factors'] if f['name'] == name), None)
     if factor_params is None:
         raise ValueError(f"Factor {name} not found in the config file.")
+
     author = factor_params['author']
     FACTOR_VALUES_PATH = os.path.join(SHARED_PATH, author, 'factor_manage', 'result','indicator')
     factor_values_path_new = os.path.join(FACTOR_VALUES_PATH, f"{name}.parquet")
