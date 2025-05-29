@@ -6,7 +6,7 @@ from calc_alpha import AlphaCalc
 import os
 import pandas as pd
 from configs.syspath import (BASE_PATH, DATA_PATH, UNIVERSE_PATH, 
-                                BACKTEST_PATH, IMAGE_PATH, INTERMEDIATE_PATH, STATS_PATH,SHARED_PATH)
+                                BACKTEST_PATH, IMAGE_PATH, INTERMEDIATE_PATH, STATS_PATH,SHARED_PATH, FACTOR_VALUES_PATH)
 FACTOR_CONFIG_PATH = os.path.join(BASE_PATH, 'configs', 'factor.yaml')
 
 
@@ -32,8 +32,9 @@ if __name__ == "__main__":
     if factor_params is None:
         raise ValueError(f"Factor {args.name} not found in the config file.")
     author = factor_params['author']
-    FACTOR_VALUES_PATH = os.path.join(SHARED_PATH, author, 'factorlib', 'factor_values')
+    # FACTOR_VALUES_PATH = os.path.join(SHARED_PATH, author, 'factorlib', 'factor_values')
     factor_values_path_new = os.path.join(FACTOR_VALUES_PATH, f"{args.name}.parquet")
+    print(factor_values_path_new)
     if not os.path.exists(factor_values_path_new):
         raise FileNotFoundError(f"Parquet file not found: {factor_values_path_new}")
     indicator_df = pd.read_parquet(factor_values_path_new)

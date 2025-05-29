@@ -11,6 +11,7 @@ DATA_PATH = os.path.join(RAWDATA_PATH, "pv_")
 UNIVERSE_PATH = os.path.join(RAWDATA_PATH, "pv_universe.parquet")
 
 
+
 BACKTEST_PATH = os.path.join(BASE_PATH,  "result")
 FACTOR_VALUES_PATH = os.path.join(BACKTEST_PATH, "indicator")
 IMAGE_PATH = os.path.join(BACKTEST_PATH, "report","image")
@@ -19,4 +20,4 @@ STATS_PATH = os.path.join(BACKTEST_PATH, "stats.csv")
 CONFIG_FILE = os.path.join(BASE_PATH, "configs", "factor.yaml")
 
 
-# print(f"BASE_PATH: {BASE_PATH}")
+#print(f"BASE_PATH: {BASE_PATH}")

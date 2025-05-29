@@ -6,7 +6,7 @@ from tqdm import tqdm
 import os
 import time
 from configs.syspath import (BASE_PATH, DATA_PATH, UNIVERSE_PATH,
-                                BACKTEST_PATH, IMAGE_PATH, STATS_PATH, FACTOR_CODE_PATH, SHARED_PATH, INTERMEDIATE_PATH, FACTOR_VALUES_PATH)
+                                BACKTEST_PATH, RAWDATA_PATH, IMAGE_PATH, STATS_PATH, FACTOR_CODE_PATH, SHARED_PATH, INTERMEDIATE_PATH, FACTOR_VALUES_PATH)
 import importlib
 import mysql.connector
 from configs.dbconfig import db_config
@@ -96,7 +96,8 @@ class AlphaCalc:
         self.composite_method = prams.get('composite_method', False)
         self.depend_factor_field = prams.get('depend_factor_field', None)
         self.author = prams.get('author', 'Unknown')
-      
+        # self.start_date = prams.get('start_date', None)
+        # self.end_date = prams.get('end_date', None)
         # define the FACTOR_VALUES_PATH as a global variable
         # global FACTOR_VALUES_PATH
         # FACTOR_VALUES_PATH = os.path.join(SHARED_PATH, self.author, 'factorlib', 'factor_values')
@@ -151,7 +152,7 @@ class AlphaCalc:
         self.dr = pd.date_range(start=self.start_date - timedelta(days=(self.pre_lag * self.bar_num) // 288 ),
                                 end=self.end_date)
         bars = np.arange(1, 289)
-        self.mindex = pd.MultiIndex.from_product([self.dr, bars], names=['date', 'Label'])
+        self.mindex = pd.MultiIndex.from_product([self.dr, bars], names=['date', 'Label'])        
         if not os.path.exists(UNIVERSE_PATH):
             raise FileNotFoundError(f"Universe file not found at {UNIVERSE_PATH}")
         self.univ = pd.read_parquet(UNIVERSE_PATH).reindex(self.mindex).ffill()
@@ -658,7 +659,7 @@ class AlphaCalc:
         
         intermediate_path = os.path.join(INTERMEDIATE_PATH, f"{self.name}.parquet")
         intermediate_df.to_parquet(intermediate_path, index=True)
-
+        print(f"Intermediate data saved to {intermediate_path}")
         # 返回统计数据
         stats = {
             'pot': pot,
