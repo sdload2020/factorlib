@@ -35,7 +35,8 @@ def tmain(names):
 def main():
     parser = argparse.ArgumentParser(description='Run factor computations, backtest, and plotting for multiple factors.')
     # parser.add_argument('--config', type=str, default=FACTOR_CONFIG_PATH, help='Path to the config YAML file.')
-    parser.add_argument('--names', nargs='+', type=str, default=['xy5'],help='输入的数组参数，用空格分隔')
+    # parser.add_argument('--names', nargs='+', type=str, default=['xy5'],help='输入的数组参数，用空格分隔') ##用于debug调试 added 250530
+    parser.add_argument('--names', nargs='+', type=str, required=True,help='输入的数组参数，用空格分隔')
     args = parser.parse_args()
     factors = args.names
 
