@@ -38,6 +38,24 @@ def delete_all_crontab():
     os.system('crontab -r')
     print("所有 crontab 条目已被删除。")
 
+def main():
+    cron_entry = generate_crontab_entry(
+        minute='07',
+        hour='15',
+        day_of_month='*',
+        month='*',
+        day_of_week='*',  # 一周7天
+        python_path='/home/yangzhilin/anaconda3/envs/yangzl39/bin/python',  # 替换Python 路径(terminal中输入which python)
+        ## 以下不需要修改
+        script_path=BASE_PATH,
+        script='main.py',
+        log_file=os.path.join(LOGS_PATH, 'cron.log') 
+    )
+    add_crontab_entry(cron_entry)
+    print("Crontab 已添加：")
+    print(cron_entry)
+    return
+    
 if __name__ == '__main__':
     # 自定义参数
     cron_entry = generate_crontab_entry(
