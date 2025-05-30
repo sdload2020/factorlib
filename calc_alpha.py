@@ -5,12 +5,12 @@ from datetime import timedelta
 from tqdm import tqdm
 import os
 import time
-from factorlib.configs.syspath import (BASE_PATH, DATA_PATH, UNIVERSE_PATH,WORK_PATH,
+from configs.syspath import (BASE_PATH, DATA_PATH, UNIVERSE_PATH,WORK_PATH,
                                 BACKTEST_PATH, IMAGE_PATH, STATS_PATH, FACTOR_CODE_PATH, SHARED_PATH, INTERMEDIATE_PATH, FACTOR_VALUES_PATH)
 import importlib
 import mysql.connector
-from factorlib.configs.dbconfig import db_config
-from factorlib.configs.tablecreator import create_backtest_result_table
+from configs.dbconfig import db_config
+from configs.tablecreator import create_backtest_result_table
 import datetime
 from mysql.connector import errorcode
 import matplotlib.pyplot as plt
