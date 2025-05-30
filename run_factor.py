@@ -2,11 +2,11 @@
 import time
 import yaml
 import argparse
-from factorlib.calc_alpha import AlphaCalc
+from calc_alpha import AlphaCalc
 import os
 from pathlib import Path
 import ast
-from factorlib.configs.syspath import (BASE_PATH,FACTOR_CODE_PATH)
+from configs.syspath import (BASE_PATH,FACTOR_CODE_PATH)
 
 factor_config_path = os.path.join(BASE_PATH, 'configs', 'factor.yaml')
 def run_factor(params):
