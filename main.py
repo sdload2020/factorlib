@@ -5,6 +5,7 @@ import sys
 import yaml
 import multiprocessing
 import os
+
 from configs.syspath import (BASE_PATH, WORK_PATH)
 
 # FACTOR_CONFIG_PATH = os.path.join(BASE_PATH, 'configs', 'factor.yaml')
