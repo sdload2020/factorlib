@@ -21,6 +21,11 @@ def main():
     # parser_plot.add_argument("--config", default=WORK_PATH+"/configs/factor.yaml", help="配置文件路径")
     parser_plot.add_argument("--name", default="", help="因子名称")
 
+    # 全量执行
+    parser_main = subparsers.add_parser("main", help="全量执行")
+    # parser_plot.add_argument("--config", default=WORK_PATH+"/configs/factor.yaml", help="配置文件路径")
+    parser_main.add_argument('--names', nargs='+', type=str, required=True,help='输入的数组参数，用空格分隔')
+
     # 定时任务
     parser_cron = subparsers.add_parser("cron", help="配置定时任务")
     # parser_cron.add_argument("--config", default="configs/factor.yaml", help="配置文件路径")
@@ -36,6 +41,10 @@ def main():
     elif args.command == "plot":
         from factorlib import run_plot
         run_plot.main(args.name)
+    elif args.command == "main":
+        from factorlib import main
+        s = ",".join(args.names)
+        main.tmain(s)
     elif args.command == "cron":
         from factorlib import cron_manager
         cron_manager.main()

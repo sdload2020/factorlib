@@ -55,16 +55,47 @@ if __name__ == "__main__":
     parser.add_argument('--config', type=str, default= factor_config_path, help='Path to the config YAML file.')
     args = parser.parse_args()
     name = args.name
-    # fileName = args.name + '.py'
+
     start_time = time.time()
-    with open(args.config, 'r',encoding='utf-8') as f:
-        config = yaml.safe_load(f)
-    factor_params = next((f for f in config['factors'] if f['name'] == args.name), None)
+
+    fileName = name + '.py'
+    path = Path(FACTOR_CODE_PATH)
+    for file_path in path.rglob('*.py'):  # 使用 rglob 递归匹配所有文件
+        if file_path.is_file():
+            if(file_path.name == fileName):
+                with open(file_path, 'r',encoding='utf-8') as f:
+                    source = f.read()
+                tree = ast.parse(source)
+                arrays = {}
+
+                for node in tree.body:
+                    if isinstance(node, ast.Assign):
+                        for target in node.targets:
+                            if isinstance(target, ast.Name) and target.id == 'config':
+                                arrays = ast.literal_eval(node.value)
+                                break
+
+
+    factor_params = next((f for f in arrays['factors'] if f['name'] == name), None)
+    print(factor_params)
     if factor_params is None:
-        raise ValueError(f"Factor {args.name} not found in the config file.")
+        raise ValueError(f"Factor {name} not found in the config file.")
     indicator_dict_all = run_factor(factor_params)
     print(indicator_dict_all)
     
     end_time = time.time()
     total_time = end_time - start_time
     print(f"run_factor.py Total script runtime: {total_time:.2f} seconds")
+    # fileName = args.name + '.py'
+    # start_time = time.time()
+    # with open(args.config, 'r',encoding='utf-8') as f:
+    #     config = yaml.safe_load(f)
+    # factor_params = next((f for f in config['factors'] if f['name'] == args.name), None)
+    # if factor_params is None:
+    #     raise ValueError(f"Factor {args.name} not found in the config file.")
+    # indicator_dict_all = run_factor(factor_params)
+    # print(indicator_dict_all)
+    
+    # end_time = time.time()
+    # total_time = end_time - start_time
+    # print(f"run_factor.py Total script runtime: {total_time:.2f} seconds")
