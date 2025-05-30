@@ -5,13 +5,15 @@ import sys
 import yaml
 import multiprocessing
 import os
-from configs.syspath import (BASE_PATH, FACTOR_CODE_PATH)
 
-FACTOR_CONFIG_PATH = os.path.join(BASE_PATH, 'configs', 'factor.yaml')
+from configs.syspath import (BASE_PATH, WORK_PATH)
+
+# FACTOR_CONFIG_PATH = os.path.join(BASE_PATH, 'configs', 'factor.yaml')
 def run_scripts(factor_name):
-    subprocess.check_call([sys.executable, 'run_factor.py', '--name', factor_name])
-    subprocess.check_call([sys.executable, 'run_backtest.py', '--name', factor_name])
-    subprocess.check_call([sys.executable, 'run_plot.py', '--name', factor_name])
+    print(BASE_PATH)
+    subprocess.check_call([sys.executable, os.path.join(WORK_PATH, 'factorlib/')+'run_factor.py', '--name', factor_name])
+    subprocess.check_call([sys.executable, os.path.join(WORK_PATH, 'factorlib/')+'run_backtest.py', '--name', factor_name])
+    subprocess.check_call([sys.executable, os.path.join(WORK_PATH, 'factorlib/')+'run_plot.py', '--name', factor_name])
 
 def run_scripts2(factor_name):
     subprocess.check_call([sys.executable, 'factor', '--name', factor_name])
