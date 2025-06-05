@@ -13,6 +13,7 @@ from datetime import datetime
 from configs.syspath import LOGS_PATH
 
 # 设置日志
+LOGS_PATH = '/data-platform/gux/factor_manage/logs' 
 LOG_FILE = os.path.join(LOGS_PATH, "streamlit.log")
 os.makedirs(LOGS_PATH, exist_ok=True)
 

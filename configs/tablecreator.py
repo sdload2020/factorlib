@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS backtest_result (
     frequency VARCHAR(50),
     updatetime DATETIME,
     factortype VARCHAR(255),
+    factortype2 VARCHAR(255),
     level VARCHAR(255),
     if_prod BOOLEAN,
     start_date DATE,
