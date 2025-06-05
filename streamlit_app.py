@@ -4,47 +4,68 @@ import mysql.connector
 from mysql.connector import errorcode
 import os
 import logging
+from logging.handlers import TimedRotatingFileHandler
 from glob import glob
-from configs.syspath import IMAGE_PATH, SHARED_PATH
+from configs.syspath import IMAGE_PATH, SHARED_PATH, LOGS_PATH as LOGS_PATH_1
 from utils.db_connector import db_config
 from streamlit_autorefresh import st_autorefresh
 import pytz
 from datetime import datetime
-from configs.syspath import LOGS_PATH
 
-# 设置日志
-LOGS_PATH = '/data-platform/gux/factor_manage/logs' 
-LOG_FILE = os.path.join(LOGS_PATH, "streamlit.log")
-os.makedirs(LOGS_PATH, exist_ok=True)
+LOGS_PATH_2 = '/data-platform/gux/factor_manage/logs'
 
 logger = logging.getLogger("streamlit")
 logger.setLevel(logging.INFO)
+fmt = logging.Formatter("%(asctime)s %(levelname)s: %(message)s")
+
 if not logger.handlers:
-    fh = logging.FileHandler(LOG_FILE)
-    formatter = logging.Formatter("%(asctime)s %(levelname)s: %(message)s")
-    fh.setFormatter(formatter)
-    logger.addHandler(fh)
+    # 生成日期字符串
+    tz = pytz.timezone('Asia/Shanghai')
+    today_str = datetime.now(tz).strftime("%Y-%m-%d")
+
+    # 第一个日志目录（LOGS_PATH_1, 默认路径）
+    try:
+        streamlit_path1 = os.path.join(LOGS_PATH_1, "streamlit")
+        os.makedirs(streamlit_path1, exist_ok=True)
+        try:
+            log_file1 = os.path.join(streamlit_path1, f"{today_str}.log")
+            fh1 = logging.FileHandler(log_file1, encoding="utf-8")
+            fh1.setFormatter(fmt)
+            logger.addHandler(fh1)
+        except Exception as e:
+            logger.error(f"无法创建或写入日志文件 {streamlit_path1}/{today_str}.log: {e}")
+    except Exception as e:
+        logger.error(f"无法创建或写入日志目录 {LOGS_PATH_1}: {e}")
+
+    # 第二个日志目录（LOGS_PATH_2, 方便查看前端页面状态)
+    try:
+        streamlit_path2 = os.path.join(LOGS_PATH_2, "streamlit")
+        os.makedirs(streamlit_path2, exist_ok=True)
+        try:
+            log_file2 = os.path.join(streamlit_path2, f"{today_str}.log")
+            fh2 = logging.FileHandler(log_file2, encoding="utf-8")
+            fh2.setFormatter(fmt)
+            logger.addHandler(fh2)
+        except Exception as e:
+            logger.error(f"无法创建或写入日志文件 {streamlit_path2}/{today_str}.log: {e}")
+    except Exception as e:
+        logger.error(f"无法创建或写入日志目录 {LOGS_PATH_2}: {e}")
 
 logger.info("Streamlit 页面启动。")
 
-# 页面标题
+
 st.title("因子回测结果")
 
-# 自动刷新，每600秒刷新一次
 count = st_autorefresh(interval=600000, key="auto_refresh")
 
-# 手动刷新按钮
 if st.button("手动刷新"):
     logger.info("用户点击手动刷新按钮。")
     st.rerun()
 
-# 显示上次刷新时间（北京时间）
 tz = pytz.timezone('Asia/Shanghai')
 last_refresh_time = datetime.now(tz).strftime("%Y-%m-%d %H:%M:%S")
 st.write(f"上次刷新时间: {last_refresh_time}")
 
-# 从数据库获取回测数据
-# @st.cache_data(ttl=300)
 def get_backtest_data():
     try:
         cnx = mysql.connector.connect(**db_config)
@@ -57,6 +78,10 @@ def get_backtest_data():
     except mysql.connector.Error as err:
         logger.error(f"数据库错误: {err}")
         st.error(f"数据库错误: {err}")
+        return pd.DataFrame()
+    except Exception as e:
+        logger.error(f"未预期错误: {e}")
+        st.error(f"发生未预期错误: {e}")
         return pd.DataFrame()
     finally:
         if 'cursor' in locals():
@@ -72,22 +97,32 @@ if not df.empty:
 else:
     st.info("暂无回测数据。")
 
+IMAGE_PATH_xubo = os.path.join(SHARED_PATH, "xubo", "factor_manage", "result", "report", "image")
+IMAGE_PATH_yzl = os.path.join(SHARED_PATH, "yzl", "factor_manage", "result", "report", "image")
+IMAGE_PATH_gt = os.path.join(SHARED_PATH, "gt", "factor_manage", "result", "report", "image")
+IMAGE_PATH_gx = os.path.join(SHARED_PATH, "gux", "factor_manage", "result", "report", "image")
 
-IMAGE_PATH_xubo = os.path.join(SHARED_PATH, "xubo", "factor_manage", "result","report","image")
-IMAGE_PATH_yzl = os.path.join(SHARED_PATH, "yzl", "factor_manage", "result","report","image")
-IMAGE_PATH_gt = os.path.join(SHARED_PATH, "gt", "factor_manage", "result","report","image")
-# 获取因子图像
-# @st.cache_data(ttl=300)
 def get_factor_images():
     factor_imgs = {}
-    for image_path in [IMAGE_PATH_xubo, IMAGE_PATH_yzl, IMAGE_PATH_gt]:
-        ic_files = glob(os.path.join(image_path, "*_ic_pnl.png"))
-        for ic in ic_files:
-            base = os.path.basename(ic)
-            factor_title = base.replace("_ic_pnl.png", "")
-            gmv_path = os.path.join(image_path, f"{factor_title}_gmv_benchmark.png")
-            if os.path.exists(gmv_path):
-                factor_imgs[factor_title] = (ic, gmv_path)
+    for image_path in [IMAGE_PATH_xubo, IMAGE_PATH_yzl, IMAGE_PATH_gt, IMAGE_PATH_gx]:
+        try:
+            if not os.path.isdir(image_path):
+                logger.error(f"图像目录不存在: {image_path}")
+                continue
+            ic_files = glob(os.path.join(image_path, "*_ic_pnl.png"))
+            for ic in ic_files:
+                try:
+                    base = os.path.basename(ic)
+                    factor_title = base.replace("_ic_pnl.png", "")
+                    gmv_path = os.path.join(image_path, f"{factor_title}_gmv_benchmark.png")
+                    if os.path.exists(gmv_path):
+                        factor_imgs[factor_title] = (ic, gmv_path)
+                    else:
+                        logger.error(f"缺少 GMV 图像文件: {gmv_path}")
+                except Exception as e:
+                    logger.error(f"处理图像文件时出错: {ic}，错误: {e}")
+        except Exception as e:
+            logger.error(f"读取目录时出错: {image_path}，错误: {e}")
     logger.info(f"找到 {len(factor_imgs)} 个因子的图像。")
     return factor_imgs
 
@@ -98,8 +133,15 @@ st.subheader("因子图展示")
 if factor_images:
     factor_selected = st.selectbox("选择因子", sorted(factor_images.keys()))
     ic_img, gmv_img = factor_images[factor_selected]
-    st.image(ic_img, caption=f"{factor_selected} - IC & PnL", use_container_width=True)
-    st.image(gmv_img, caption=f"{factor_selected} - GMV & Benchmark", use_container_width=True)
-
+    try:
+        st.image(ic_img, caption=f"{factor_selected} - IC & PnL", use_container_width=True)
+    except Exception as e:
+        logger.error(f"显示 IC 图像时出错: {ic_img}，错误: {e}")
+        st.error(f"无法显示 IC 图像: {e}")
+    try:
+        st.image(gmv_img, caption=f"{factor_selected} - GMV & Benchmark", use_container_width=True)
+    except Exception as e:
+        logger.error(f"显示 GMV 图像时出错: {gmv_img}，错误: {e}")
+        st.error(f"无法显示 GMV 图像: {e}")
 else:
     st.info("未找到图像文件，请确认 IMAGE_PATH 中存在对应的 PNG 文件。")
