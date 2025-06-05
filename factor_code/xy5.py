@@ -4,8 +4,8 @@ import numpy as np
 config = {'factors': [
     {
     "name": "xy5",
-    "pre_lag": 1000,  # 第一个数据点需要的时间长度, 默认为1000, 单位是frequency参数频率下的, bar数量，建议不要于bar_lag差距过大，会降低计算效率
-    "bar_lag": 1000,  # rolling时每一个数据点需要的时间长度
+    "pre_lag": 10,  # 第一个数据点需要的时间长度, 默认为1000, 单位是frequency参数频率下的, bar数量，建议不要于bar_lag差距过大，会降低计算效率
+    "bar_lag": 10,  # rolling时每一个数据点需要的时间长度
     "frequency": '8h',  # '10m', '15m', '30m', '1h',  '4h', '6h', '8h', '1d'
     "run_mode": 'all',  # 'all', 'recent', 'online'
     "start_date": '2022-01-01',  # 开始时间, 只对run_mode='all'有效

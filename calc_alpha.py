@@ -76,7 +76,7 @@ def rescale(dft, fre, bar_fields, require_last=True):
 
 class AlphaCalc:
     freq_hours_map = {
-        '5m':  5 * 60,
+        '5m':  5 / 60,
         '10m': 10 / 60,
         '15m': 15 / 60,
         '30m': 30 / 60,
