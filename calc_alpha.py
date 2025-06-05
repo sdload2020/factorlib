@@ -105,10 +105,12 @@ class AlphaCalc:
         self.preprocess = getattr(factor_module, 'preprocess')
         self.handle_all = getattr(factor_module, 'handle_all')
         self.handle_bar = getattr(factor_module, 'handle_bar')
+        self.normalize_cs = getattr(factor_module, 'normalize_cs')
         self.run_mode = prams['run_mode']
         self.composite_method = prams.get('composite_method', False)
         self.depend_factor_field = prams.get('depend_factor_field', None)
         self.author = prams.get('author', 'Unknown')
+
       
         # define the FACTOR_VALUES_PATH as a global variable
         # global FACTOR_VALUES_PATH
@@ -120,6 +122,7 @@ class AlphaCalc:
         self.intermediate_path = INTERMEDIATE_PATH
         os.makedirs(self.intermediate_path, exist_ok=True)
         self.factortype = prams.get('factortype', None)
+        self.factortype2 = prams.get('factortype2', 'cs')  # Default to 'cs' if not provided
         self.if_prod = prams.get('if_prod', False)
         self.level = prams.get('level', 1)
         self.if_crontab = prams.get('if_crontab', False)
@@ -203,9 +206,10 @@ class AlphaCalc:
         if 'Last_next' not in self.bar_dict:
             raise KeyError("'Last_next' key not found in bar_dict.")
         self.ret_1lag = self.bar_dict['Last_next'].pct_change().shift(-1)
+        # self.ret_1lag = self.bar_dict['Last'].pct_change().shift(-1)
         if self.ret_1lag.empty:
             raise ValueError("ret_1lag is empty. Please check if 'Last_next' data is correct.")
-        self.mask = self.univ.loc[self.ret_1lag.index].ffill().replace(False, np.nan)
+        self.mask = self.univ.loc[self.ret_1lag.index].ffill().replace(False, np.nan).astype(float)
         self.indicator_dict = {'indicator': None}
         self.run_result = None
 
@@ -501,25 +505,33 @@ class AlphaCalc:
             raise ValueError("Indicator dictionary is not properly structured.")
 
         # 计算各项指标
-        sig = (indicator_dict * self.mask).loc[self.start_date:self.end_date]
+        indicator_dict = (indicator_dict.loc[self.start_date:self.end_date] * self.mask.loc[self.start_date:self.end_date]).loc[self.start_date:self.end_date]
+        sig = self.normalize_cs(indicator_dict)
+    
         raw_pnl = (sig * self.ret_1lag).sum(1)
         vol = raw_pnl.loc[self.rolling_start:self.rolling_end].std()
-        delta = sig / vol
-        pnl = (delta * self.mask.loc[self.start_date:self.end_date] * self.ret_1lag.loc[self.start_date:self.end_date]).sum(1)
-        pnl = pnl.astype(float)
+        if self.factortype2 == 'cs':
+            delta = sig
+        else:
+            delta = sig / vol
+        pnl = (delta * self.ret_1lag.loc[self.start_date:self.end_date])
+        cpnl = pnl.sum(1)
+        cpnl = cpnl.astype(float)
         turnover = delta.diff().abs().sum(1)
-        pot = pnl.sum() / turnover.sum() * 10000
+        pot = round(pnl.sum(1).sum() / turnover.sum() * 10000, 2)
         freq_hours = self.freq_hours_map.get(self.fre, 1)
-        hd = delta.abs().sum(axis=1).mean() / turnover.mean() * 2 * freq_hours / 288
-        mdd = abs((pnl.cumsum() - pnl.cumsum().expanding().max()).min())
-        wratio = (pnl > 0).astype(int).sum() / (len(pnl) * 1.0)
+        bars_per_day = 24 / freq_hours
+        hd = (delta.abs().sum(axis=1).mean() / turnover.mean() * 2) / bars_per_day
+        mdd = abs((cpnl.cumsum() - cpnl.cumsum().expanding().max()).min())
+        wratio = (cpnl > 0).astype(int).sum() / (len(pnl) * 1.0)
         valid_idx = (self.ret_1lag.std(axis=1) != 0) & (sig.std(axis=1) != 0)
         ic = self.ret_1lag.loc[valid_idx].corrwith(sig.loc[valid_idx], axis=1, drop=True)
         # ic = self.ret_1lag.corrwith(sig, axis=1, drop=True)
         ic_mean = ic.mean()
         ir = ic_mean / ic.std()
-        ypnl = pnl.mean() * (288 / freq_hours) * 365
-        sharpe = pnl.mean() / pnl.std() * np.sqrt((288 / freq_hours) * 365)
+
+        ypnl = cpnl.mean() * bars_per_day * 365
+        sharpe = round(cpnl.mean() / cpnl.std() * np.sqrt(bars_per_day * 365), 2)
         benchmark = self.ret_1lag.loc[self.start_date:self.end_date].mean(1)
         gmv = delta.abs().sum(1)
         max_leverage_ratio = gmv.max() / gmv.mean()
@@ -537,6 +549,7 @@ class AlphaCalc:
             'author': self.author,
             'updatetime': current_datetime,
             'factortype': self.factortype,
+            'factortype2': self.factortype2,
             'if_prod': self.if_prod,
             'start_date': value_start_date.strftime('%Y-%m-%d'),
             'end_date': value_end_date.strftime('%Y-%m-%d'),
@@ -578,15 +591,16 @@ class AlphaCalc:
             # 使用 INSERT ... ON DUPLICATE KEY UPDATE
             insert_update_query = """
             INSERT INTO backtest_result (
-                name, frequency, updatetime, factortype, level, if_prod, start_date, end_date, 
+                name, frequency, updatetime, factortype, factortype2, level, if_prod, start_date, end_date, 
                 pot, hd, mdd, wratio, ir, ypnl, sharpe, max_leverage_ratio,
                 if_crontab, out_sample_date, author, factor_value_path, factor_code_path, intermediate_path
-            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             ON DUPLICATE KEY UPDATE
                 level = VALUES(level),
                 author = VALUES(author),
                 updatetime = VALUES(updatetime),
                 factortype = VALUES(factortype),
+                factortype2 = VALUES(factortype2),
                 if_prod = VALUES(if_prod),
                 start_date = VALUES(start_date),
                 end_date = VALUES(end_date),
@@ -611,6 +625,7 @@ class AlphaCalc:
                     stats_data['frequency'],
                     stats_data['updatetime'],
                     stats_data['factortype'],
+                    stats_data['factortype2'],
                     stats_data['level'],
                     stats_data['if_prod'],
                     stats_data['start_date'],
@@ -660,7 +675,7 @@ class AlphaCalc:
         # 继续保存中间数据到Parquet文件
         intermediate_dir = INTERMEDIATE_PATH
         os.makedirs(intermediate_dir, exist_ok=True)
-        intermediate_df = pd.concat([pnl, raw_pnl, gmv, ic, benchmark], axis=1)
+        intermediate_df = pd.concat([cpnl, raw_pnl, gmv, ic, benchmark], axis=1)
         intermediate_df.columns = ['pnl', 'raw_pnl', 'gmv', 'ic', 'benchmark']
         
         if not intermediate_df.index.is_monotonic_increasing:

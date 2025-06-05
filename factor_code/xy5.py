@@ -4,12 +4,12 @@ import numpy as np
 config = {'factors': [
     {
     "name": "xy5",
-    "pre_lag": 6,  # 第一个数据点需要的时间长度, 默认为1000, 单位是frequency参数频率下的, bar数量，建议不要于bar_lag差距过大，会降低计算效率
-    "bar_lag": 5,  # rolling时每一个数据点需要的时间长度
+    "pre_lag": 10,  # 第一个数据点需要的时间长度, 默认为1000, 单位是frequency参数频率下的, bar数量，建议不要于bar_lag差距过大，会降低计算效率
+    "bar_lag": 10,  # rolling时每一个数据点需要的时间长度
     "frequency": '8h',  # '10m', '15m', '30m', '1h',  '4h', '6h', '8h', '1d'
     "run_mode": 'all',  # 'all', 'recent', 'online'
-    "start_date": '2025-01-01',  # 开始时间, 只对run_mode='all'有效
-    "end_date": '2025-05-13',  # 结束时间, 只对run_mode='all'有效
+    "start_date": '2022-01-01',  # 开始时间, 只对run_mode='all'有效
+    "end_date": '2025-05-29',  # 结束时间, 只对run_mode='all'有效
     # "if_addition": True,       # online模式下需要为true, 其他无所谓，填不填都行
     "bar_fields": [  # 需要的原始数据的字段，首字母大写
         'Open',
@@ -23,6 +23,7 @@ config = {'factors': [
     #     'xy1'
     # ],
     "factortype": 'pv',
+    "factortype2": 'cs',  # 用于区分ts和cs因子
     "author": 'yzl',  ## boxu, gt, yzl 必须按这样填写, 会去区分路径, 正确填写不然会报错
     "if_prod": False,  ## 是否上线
     "level": 1,  ## 层级，依赖原始数据的为1，依赖1级因子的为2，以此类推
@@ -34,7 +35,12 @@ config = {'factors': [
 def initialize():
     pass
     
-
+def normalize_cs(indicator, tail_l=4):
+    indi_std = indicator.replace([np.inf, -np.inf], np.nan).std(axis=1).replace(0, np.nan).ffill().to_frame().values
+    indi = np.clip((indicator - indicator.mean(1).to_frame().values) / indi_std, -1 * tail_l, tail_l)
+    indi = indi - indi.mean(1).to_frame().values
+    sig = indi / indi.abs().sum(1).to_frame().values
+    return sig
 
 def preprocess(bar_dict):
 
