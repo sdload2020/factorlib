@@ -7,7 +7,7 @@ from calc_alpha import AlphaCalc
 import pandas as pd
 from pathlib import Path
 import ast
-from configs.syspath import (BASE_PATH, SHARED_PATH, IMAGE_PATH, FACTOR_CODE_PATH)
+from configs.syspath import (BASE_PATH, SHARED_PATH, IMAGE_PATH, FACTOR_CODE_PATH, FACTOR_VALUES_PATH)
 from utils.db_connector import fetch_latest_stats_from_db
 factor_config_path = os.path.join(BASE_PATH, 'configs', 'factor.yaml')
 
@@ -118,7 +118,7 @@ if __name__ == "__main__":
         raise ValueError(f"Factor {name} not found in the config file.")
 
     author = factor_params['author']
-    FACTOR_VALUES_PATH = os.path.join(SHARED_PATH, author, 'factor_manage', 'result','indicator')
+    # FACTOR_VALUES_PATH = os.path.join(SHARED_PATH, author, 'factor_manage', 'result','indicator')
     factor_values_path_new = os.path.join(FACTOR_VALUES_PATH, f"{name}.parquet")
     if not os.path.exists(factor_values_path_new):
         raise FileNotFoundError(f"Parquet file not found: {factor_values_path_new}")
