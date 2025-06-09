@@ -61,7 +61,6 @@ def main(name):
         raise ValueError(f"Factor {name} not found in the config file.")
 
     author = factor_params['author']
-    FACTOR_VALUES_PATH = os.path.join(SHARED_PATH, author, 'factor_manage', 'result','indicator')
     factor_values_path_new = os.path.join(FACTOR_VALUES_PATH, f"{name}.parquet")
     if not os.path.exists(factor_values_path_new):
         raise FileNotFoundError(f"Parquet file not found: {factor_values_path_new}")
