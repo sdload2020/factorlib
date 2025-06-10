@@ -7,12 +7,15 @@ import os
 from pathlib import Path
 import ast
 from configs.syspath import (BASE_PATH,FACTOR_CODE_PATH)
+from loguru import logger
 
 factor_config_path = os.path.join(BASE_PATH, 'configs', 'factor.yaml')
 def run_factor(params):
-    print("getting params in run_factor")
+    # print("getting params in run_factor")
+    logger.info("getting params in run_factor")
     simulator = AlphaCalc(params)
-    print ("running factor")
+    # print ("running factor")
+    logger.info("running factor")
     indicator_dict = simulator.run()
     return indicator_dict
 
@@ -42,11 +45,14 @@ def main(factor_name):
     if factor_params is None:
         raise ValueError(f"Factor {factor_name} not found in the config file.")
     indicator_dict_all = run_factor(factor_params)
-    print(indicator_dict_all)
+    # print(indicator_dict_all)
+    logger.info(indicator_dict_all)
+
     
     end_time = time.time()
     total_time = end_time - start_time
-    print(f"run_factor.py Total script runtime: {total_time:.2f} seconds")
+    # print(f"run_factor.py Total script runtime: {total_time:.2f} seconds")
+    logger.info(f"run_factor.py Total script runtime: {total_time:.2f} seconds")
 
     
 if __name__ == "__main__":

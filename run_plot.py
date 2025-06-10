@@ -9,13 +9,16 @@ from pathlib import Path
 import ast
 from configs.syspath import (BASE_PATH, SHARED_PATH, IMAGE_PATH, FACTOR_CODE_PATH, FACTOR_VALUES_PATH)
 from utils.db_connector import fetch_latest_stats_from_db
-factor_config_path = os.path.join(BASE_PATH, 'configs', 'factor.yaml')
+from loguru import logger
+
+# factor_config_path = os.path.join(BASE_PATH, 'configs', 'factor.yaml')
 
 def run_plot(params):
-    print("getting params in run_plot")
-
+    # print("getting params in run_plot")
+    logger.info("getting params in run_plot")
     simulator = AlphaCalc(params)
-    print("running plot")
+    # print("running plot")
+    logger.info("running plot")
     factor_name = params['name']
     author = params['author']
     # 从数据库中获取最新记录
@@ -83,7 +86,8 @@ def main(name):
     
     end_time = time.time()
     total_time = end_time - start_time
-    print(f"run_plot.py Total script runtime: {total_time:.2f} seconds")
+    logger.info(f"run_backtest.py Total script runtime: {total_time:.2f} seconds")
+    # print(f"run_plot.py Total script runtime: {total_time:.2f} seconds")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Run plotting for a specific factor.')

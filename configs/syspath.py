@@ -18,7 +18,7 @@ RAWDATA_PATH =  "/data-platform/crypto/output_parquet/"
 DATA_PATH = os.path.join(RAWDATA_PATH, "pv_")
 UNIVERSE_PATH = os.path.join(RAWDATA_PATH, "pv_universe.parquet")
 
-LOGS_PATH = "/data-platform/gux/lianghua/factorlib/logs"  # 日志文件路径
+LOGS_PATH = "/data-platform/gux/factor_manage/logs"  # 日志文件路径
 FACTOR_CODE_PATH = "/data-platform/gux/factor_manage/factor"  # 因子计算代码路径
 BACKTEST_PATH = "/data-platform/gux/factor_manage/result"
 FACTOR_VALUES_PATH = "/data-platform/gux/factor_manage/result/indicator"
@@ -26,6 +26,7 @@ IMAGE_PATH = "/data-platform/gux/factor_manage/result/report/image"
 INTERMEDIATE_PATH = "/data-platform/gux/factor_manage/result/report/intermediate"
 STATS_PATH = "/data-platform/gux/factor_manage/result/stats.csv"
 CONFIG_FILE = "/data-platform/gux/factor_manage/result/configs/factor.yaml"
+RUN_PYTHON_PATH = "/data-platform/gux/factor_manage/factorlibTools"
 
 
 # print(f"BASE_PATH: {BASE_PATH}")
