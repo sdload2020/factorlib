@@ -5,6 +5,7 @@ import sys
 import yaml
 import multiprocessing
 import os
+import time
 
 from configs.syspath import (BASE_PATH, WORK_PATH)
 
@@ -21,7 +22,9 @@ def run_scripts2(factor_name):
     subprocess.check_call([sys.executable, 'plot', '--name', factor_name])
 
 def tmain(names):
-    print("names:"+names)
+    local_time = time.localtime()
+    print(f"执行时间: {local_time}")
+    # print("names:"+names)
     factors = names.split(",") 
     processes = []
     for factor in factors:

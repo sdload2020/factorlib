@@ -1,7 +1,7 @@
 import os
 from configs.syspath import (
     BASE_PATH, LOGS_PATH, DATA_PATH, UNIVERSE_PATH, FACTOR_VALUES_PATH,
-    BACKTEST_PATH, IMAGE_PATH, INTERMEDIATE_PATH, STATS_PATH
+    BACKTEST_PATH, IMAGE_PATH, INTERMEDIATE_PATH, STATS_PATH,RUN_PYTHON_PATH
 )
 
 def generate_crontab_entry(
@@ -24,6 +24,26 @@ def generate_crontab_entry(
     cron_entry = f'{cron_time} {command}'
     return cron_entry
 
+def generate_crontab_entry2(
+    minute='57',
+    hour='14',
+    day_of_month='*',
+    month='*',
+    day_of_week='*',
+    python_path='/home/yangzhilin/anaconda3/envs/yangzl39/bin/python',
+    script_path=BASE_PATH,
+    script='main.py',
+    log_file=os.path.join(LOGS_PATH, 'cron.log')
+):
+
+    command = (
+        # f'cd {script_path} && '
+        f'{python_path} {script} >> {log_file} 2>&1'
+    )
+    cron_time = f'{minute} {hour} {day_of_month} {month} {day_of_week}'
+    cron_entry = f'{cron_time} {command}'
+    return cron_entry
+
 def add_crontab_entry(cron_entry):
     os.system('crontab -l > mycron 2>/dev/null')
     with open('mycron', 'a') as cron_file:
@@ -37,6 +57,32 @@ def delete_all_crontab():
     """
     os.system('crontab -r')
     print("所有 crontab 条目已被删除。")
+
+def tmain(names,times):
+    time = times.split(",")
+    print(times)
+    minute = time[0]
+    hour = time[1]
+    day_of_month = time[2]
+    month = time[3]
+    day_of_week = time[4]
+
+    cron_entry = generate_crontab_entry2(
+        minute=minute,
+        hour=hour,
+        day_of_month=day_of_month,
+        month=month,
+        day_of_week=day_of_week,  # 一周7天
+        python_path=RUN_PYTHON_PATH,  # 替换Python 路径(terminal中输入which python)
+        ## 以下不需要修改
+        script_path=BASE_PATH,
+        script='main --names '+names,
+        log_file=os.path.join(LOGS_PATH, 'cron.log')
+    )
+    add_crontab_entry(cron_entry)
+    print("Crontab 已添加：")
+    print(cron_entry)
+    return
 
 def main():
     cron_entry = generate_crontab_entry(

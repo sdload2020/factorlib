@@ -28,7 +28,8 @@ def main():
 
     # 定时任务
     parser_cron = subparsers.add_parser("cron", help="配置定时任务")
-    # parser_cron.add_argument("--config", default="configs/factor.yaml", help="配置文件路径")
+    parser_cron.add_argument('--names', nargs='+', type=str, required=True,help='输入的数组参数，用空格分隔')
+    parser_cron.add_argument('--time', nargs='+', type=str, required=True, help='输入的数组参数，用空格分隔')
 
     args = parser.parse_args()
 
@@ -47,7 +48,9 @@ def main():
         main.tmain(s)
     elif args.command == "cron":
         from factorlib import cron_manager
-        cron_manager.main()
+        s = ",".join(args.names)
+        t = ",".join(args.time)
+        cron_manager.tmain(s,t)
     else:
         parser.print_help()
 
