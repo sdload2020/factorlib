@@ -8,14 +8,17 @@ import pandas as pd
 from pathlib import Path
 import ast
 from configs.syspath import (BASE_PATH, FACTOR_CODE_PATH,SHARED_PATH, FACTOR_VALUES_PATH)
+from loguru import logger
+
 FACTOR_CONFIG_PATH = os.path.join(BASE_PATH, 'configs', 'factor.yaml')
 
 
 def run_backtest(params):
-    print("getting params in run_backtest")
-
+    # print("getting params in run_backtest")
+    logger.info("getting params in run_backtest")
     simulator = AlphaCalc(params)
-    print ("running backtest")
+    # print ("running backtest")
+    logger.info("running backtest")
     stats = simulator.report_stats()
 
     return stats
@@ -42,7 +45,8 @@ def main(name):
 
 
     factor_params = next((f for f in arrays['factors'] if f['name'] == name), None)
-    print(factor_params)
+    logger.info(f"factor params: {factor_params}")
+    # print(factor_params)
     if factor_params is None:
         raise ValueError(f"Factor {name} not found in the config file.")
 
@@ -72,7 +76,8 @@ def main(name):
     performance_stats = run_backtest(factor_params)
     end_time = time.time()
     total_time = end_time - start_time
-    print(f"run_backtest.py Total script runtime: {total_time:.2f} seconds")
+    logger.info(f"run_backtest.py Total script runtime: {total_time:.2f} seconds")
+    # print(f"run_backtest.py Total script runtime: {total_time:.2f} seconds")
     
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Run backtest for a specific factor.')

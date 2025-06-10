@@ -15,6 +15,7 @@ import datetime
 from mysql.connector import errorcode
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
+from loguru import logger
 
 def load_external_module(module_name: str, path_to_py: str):
     spec = importlib.util.spec_from_file_location(module_name, path_to_py)
@@ -100,8 +101,10 @@ class AlphaCalc:
         self.name = prams['name']
 
         module_path = os.path.join(WORK_PATH, 'factor',self.name+'.py')
-        print("module_path:"+module_path)
-        print("self.name:"+self.name)
+        # print("module_path:"+module_path)
+        logger.info(f"module_path:{module_path}")
+        # print("self.name:"+self.name)
+        logger.info(f"self.name:{self.name}")
         factor_module = load_external_module(self.name, module_path)
 
         #factor_module = importlib.import_module(f"factorlib.factor_code.{self.name}")
@@ -595,9 +598,11 @@ class AlphaCalc:
             # 确保表存在
             if not self.table_exists(cursor, 'backtest_result'):
                 cursor.execute(create_backtest_result_table)
-                print("表 'backtest_result' 已创建。")
+                # print("表 'backtest_result' 已创建。")
+                logger.info("表 'backtest_result' 已创建。")
             else:
-                print("表 'backtest_result' 已存在，无需创建。")
+                # print("表 'backtest_result' 已存在，无需创建。")
+                logger.info("表 'backtest_result' 已存在，无需创建。")
 
             # 检查是否已存在相同的 name, author, frequency 记录
             # cursor.execute("SELECT * FROM backtest_result WHERE name = %s", (stats_data['name'],))
@@ -606,7 +611,8 @@ class AlphaCalc:
                         (stats_data['name'], stats_data['author'], stats_data['frequency']))
             existing_record = cursor.fetchone()
             if existing_record:
-                print(f"记录已存在: {existing_record}")
+                # print(f"记录已存在: {existing_record}")
+                logger.info(f"记录已存在: {existing_record}")
 
             # 使用 INSERT ... ON DUPLICATE KEY UPDATE
             insert_update_query = """
