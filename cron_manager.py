@@ -80,7 +80,7 @@ def tmain(name,times):
         ## 以下不需要修改
         script_path=BASE_PATH,
         script='main --name '+name,
-        log_file=os.path.join(LOGS_PATH, 'cron.log')
+        # log_file=os.path.join(LOGS_PATH, 'cron.log')
     )
     add_crontab_entry(cron_entry)
     logger.info("Crontab 已添加：")
