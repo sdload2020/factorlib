@@ -5,7 +5,7 @@ from datetime import timedelta
 from tqdm import tqdm
 import os
 import time
-from configs.syspath import (BASE_PATH, DATA_PATH, UNIVERSE_PATH,WORK_PATH,
+from configs.syspath import (BASE_PATH, DATA_PATH, UNIVERSE_PATH,WORK_PATH,LOGS_PATH,
                                 BACKTEST_PATH, IMAGE_PATH, STATS_PATH, FACTOR_CODE_PATH, SHARED_PATH, INTERMEDIATE_PATH, FACTOR_VALUES_PATH)
 import importlib
 import mysql.connector
@@ -16,6 +16,9 @@ from mysql.connector import errorcode
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 from loguru import logger
+import warnings
+warnings.filterwarnings("ignore")
+from utils.logger_setup import setup_execution_logger
 
 def load_external_module(module_name: str, path_to_py: str):
     spec = importlib.util.spec_from_file_location(module_name, path_to_py)
@@ -79,6 +82,7 @@ def preprocess(bar_dict):
     indicator_dict = {'indicator':pd.DataFrame()}
     return indicator_dict
 
+
 class AlphaCalc:
     freq_hours_map = {
         '5m':  5 / 60,
@@ -101,10 +105,10 @@ class AlphaCalc:
         self.name = prams['name']
 
         module_path = os.path.join(WORK_PATH, 'factor',self.name+'.py')
-        # print("module_path:"+module_path)
-        logger.info(f"module_path:{module_path}")
-        # print("self.name:"+self.name)
-        logger.info(f"self.name:{self.name}")
+        # logger.info("module_path:"+module_path)
+        logger.info(f"执行因子:{self.name}")
+        logger.info(f"执行因子脚本路径:{module_path}")
+
         factor_module = load_external_module(self.name, module_path)
 
         #factor_module = importlib.import_module(f"factorlib.factor_code.{self.name}")
@@ -118,14 +122,12 @@ class AlphaCalc:
         self.depend_factor_field = prams.get('depend_factor_field', None)
         self.author = prams.get('author', 'Unknown')
 
-      
-        # define the FACTOR_VALUES_PATH as a global variable
-        # global FACTOR_VALUES_PATH
-        # FACTOR_VALUES_PATH = os.path.join(SHARED_PATH, self.author, 'factorlib', 'factor_values')
         self.factor_values_path = FACTOR_VALUES_PATH
         os.makedirs(self.factor_values_path, exist_ok=True)
-        # global INTERMEDIATE_PATH
-        # INTERMEDIATE_PATH = os.path.join(SHARED_PATH, self.author, 'factorlib', 'backtest', 'intermediate')
+        self.logs_path = LOGS_PATH
+        os.makedirs(self.logs_path, exist_ok=True)
+        setup_execution_logger(self.logs_path)
+
         self.intermediate_path = INTERMEDIATE_PATH
         os.makedirs(self.intermediate_path, exist_ok=True)
         self.factortype = prams.get('factortype', None)
@@ -198,7 +200,7 @@ class AlphaCalc:
                 bar_rescaled = rescale(data, self.fre, self.bar_fields)
             del data
             self.bar_dict = bar_rescaled
-
+        
             if self.composite_method:
                 factor_data = {}
                 for key in self.depend_factor_field:
@@ -324,7 +326,7 @@ class AlphaCalc:
 
     def run(self):
         if self.composite_method:
-            print("run:"+1)
+            logger.info("run:"+1)
             pass
         if self.run_mode == 'all':
             indicator_dict = self.handle_all(self.bar_dict)
@@ -515,16 +517,16 @@ class AlphaCalc:
 
     def report_stats(self):
         FACTOR_VALUES_PATH_NEW = os.path.join(self.factor_values_path, f"{self.name}.parquet")
-        print("FACTOR_VALUES_PATH_NEW:"+FACTOR_VALUES_PATH_NEW)
+        logger.info("因子值存储路径:"+FACTOR_VALUES_PATH_NEW)
         if not os.path.exists(FACTOR_VALUES_PATH_NEW):
             indicator_dict = self.run()
-            print(f"Indicator dictionary for {self.name} is not saved.")
+            logger.info(f"{self.name} 因子字典未保存.")
         else:
             indicator_dict = pd.read_parquet(FACTOR_VALUES_PATH_NEW)
-            print(f"Indicator dictionary for {self.name} is saved.")
-        
+            logger.info(f"{self.name} 因子字典已保存.")
+
         if isinstance(indicator_dict, dict) and 'indicator' not in indicator_dict:
-            raise ValueError("Indicator dictionary is not properly structured.")
+            raise ValueError("因子字典结构不正确.")
 
         # 计算各项指标
         indicator_dict = (indicator_dict.loc[self.start_date:self.end_date] * self.mask.loc[self.start_date:self.end_date]).loc[self.start_date:self.end_date]
@@ -598,10 +600,10 @@ class AlphaCalc:
             # 确保表存在
             if not self.table_exists(cursor, 'backtest_result'):
                 cursor.execute(create_backtest_result_table)
-                # print("表 'backtest_result' 已创建。")
+                # logger.info("表 'backtest_result' 已创建。")
                 logger.info("表 'backtest_result' 已创建。")
             else:
-                # print("表 'backtest_result' 已存在，无需创建。")
+                # logger.info("表 'backtest_result' 已存在，无需创建。")
                 logger.info("表 'backtest_result' 已存在，无需创建。")
 
             # 检查是否已存在相同的 name, author, frequency 记录
@@ -611,7 +613,7 @@ class AlphaCalc:
                         (stats_data['name'], stats_data['author'], stats_data['frequency']))
             existing_record = cursor.fetchone()
             if existing_record:
-                # print(f"记录已存在: {existing_record}")
+                # logger.info(f"记录已存在: {existing_record}")
                 logger.info(f"记录已存在: {existing_record}")
 
             # 使用 INSERT ... ON DUPLICATE KEY UPDATE
@@ -673,27 +675,27 @@ class AlphaCalc:
                     stats_data['factor_code_path'],
                     stats_data['intermediate_path']
                 ))
-                print("SQL 语句执行成功")
+                logger.info("SQL 语句执行成功")
             except mysql.connector.Error as err:
-                print(f"SQL 语句执行失败: {err}")
+                logger.info(f"SQL 语句执行失败: {err}")
 
             cnx.commit()
-            print("事务已提交")
+            logger.info("事务已提交")
 
             if cnx.is_connected():
-                print("数据库连接仍然有效")
+                logger.info("数据库连接仍然有效")
             else:
-                print("数据库连接已断开")
+                logger.info("数据库连接已断开")
 
         except mysql.connector.Error as err:
             if err.errno == errorcode.ER_ACCESS_DENIED_ERROR:
-                print("错误: 用户名或密码错误。")
+                logger.info("错误: 用户名或密码错误。")
             elif err.errno == errorcode.ER_BAD_DB_ERROR:
-                print("错误: 数据库不存在。")
+                logger.info("错误: 数据库不存在。")
             elif err.errno == errorcode.ER_TABLE_EXISTS_ERROR:
-                print("错误: 表已存在。")
+                logger.info("错误: 表已存在。")
             else:
-                print(f"发生错误: {err}")
+                logger.info(f"发生错误: {err}")
         finally:
             if 'cursor' in locals():
                 cursor.close()
@@ -732,6 +734,7 @@ class AlphaCalc:
             'gmv': gmv,
             'benchmark': benchmark
         }
+        logger.info(f"回测表现 {self.name}:\n{stats_data}")
         return stats
     def report_plot(self, stats, author, plot=False, savefig=False, path=IMAGE_PATH, full_title=""):
         if not plot:
