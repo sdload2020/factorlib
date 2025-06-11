@@ -54,7 +54,6 @@ def rescale(dft, fre, bar_fields, require_last=True):
         'High': 'max',
         'Low': 'min'
     }
-    
     for key in bar_fields:
         if key in agg_funcs:
             tmp = dft[key].reset_index().copy()
