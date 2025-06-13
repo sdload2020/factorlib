@@ -10,14 +10,26 @@ from configs.syspath import IMAGE_PATH, SHARED_PATH, LOGS_PATH as LOGS_PATH_1
 from utils.db_connector import db_config
 from streamlit_autorefresh import st_autorefresh
 import pytz
-from datetime import datetime
+from glob import glob
+from datetime import datetime, timedelta
+import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
+import sys
+sys.path.append('/home/yangzhilin/backtest/')
 
 LOGS_PATH_2 = '/data-platform/gux/factor_manage/logs'
 
 logger = logging.getLogger("streamlit")
 logger.setLevel(logging.INFO)
 fmt = logging.Formatter("%(asctime)s %(levelname)s: %(message)s")
+def filter_parquet_data(df, start_date, end_date, start_label, end_label):
 
+    mask = (
+        ((df.index.get_level_values('date') > start_date) & (df.index.get_level_values('date') < end_date)) |
+        ((df.index.get_level_values('date') == start_date) & (df.index.get_level_values('Label') >= start_label)) |
+        ((df.index.get_level_values('date') == end_date) & (df.index.get_level_values('Label') <= end_label))
+    )
+    return df.loc[mask]
 if not logger.handlers:
     # 生成日期字符串
     tz = pytz.timezone('Asia/Shanghai')
@@ -145,3 +157,46 @@ if factor_images:
         st.error(f"无法显示 GMV 图像: {e}")
 else:
     st.info("未找到图像文件，请确认 IMAGE_PATH 中存在对应的 PNG 文件。")
+
+#20250613 新加
+st.subheader("近30天各因子Pnl")
+tz = pytz.timezone('Asia/Shanghai')
+today = datetime.now(tz).date()
+start_date = (today - timedelta(days=30)).strftime('%Y-%m-%d')
+end_date   = today.strftime('%Y-%m-%d')
+start_label, end_label = 1, 288
+intermediate_dir = "/data-platform/yzl/factor_manage/result/report/intermediate"
+num_xticks = 10
+
+files = glob(os.path.join(intermediate_dir, "*.parquet"))
+pnl_dict = {}
+for f in files:
+    name = os.path.splitext(os.path.basename(f))[0]
+    df = pd.read_parquet(f)
+    df_f = filter_parquet_data(df, start_date, end_date, start_label, end_label)
+    if "pnl" in df_f.columns:
+        pnl_dict[name] = df_f["pnl"].cumsum()
+
+if not pnl_dict:
+    st.info("暂无Pnl数据")
+else:
+    ref_series = max(pnl_dict.values(), key=lambda s: len(s))
+    idx = ref_series.index
+    x = list(range(len(idx)))
+    xtick_labels = [f"{d.date().isoformat()}_{lbl}" for d, lbl in idx]
+
+    fig, ax = plt.subplots(figsize=(12, 6))
+    for name, series in pnl_dict.items():
+        filled = series.reindex(idx).fillna(method='ffill').fillna(0)
+        ax.plot(x, filled.values, label=name)
+
+    step = max(1, len(x) // num_xticks)
+    ax.set_xticks(x[::step])
+    ax.set_xticklabels([xtick_labels[i] for i in x][::step], rotation=45)
+    ax.set_ylabel("Cumulative PnL")
+    ax.set_title("last 30 days Pnl")
+    ax.legend(loc='upper left', fontsize='small', ncol=2)
+    st.pyplot(fig)
+    save_dir = "/data-platform/yzl/factor_manage/result/report/image"
+    os.makedirs(save_dir, exist_ok=True)
+    fig.savefig(os.path.join(save_dir, "last_30_days_pnl.png"))
