@@ -814,5 +814,5 @@ class AlphaCalc:
             os.makedirs(path, exist_ok=True)
             fig1.savefig(f'{path}/{self.name}_{self.fre}_ic_pnl.png')
             fig2.savefig(f'{path}/{self.name}_{self.fre}_gmv_benchmark.png')
-
+            
         plt.show()

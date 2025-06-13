@@ -1,5 +1,6 @@
 tmux new -s streamlit_app
-streamlit run /home/yangzhilin/backtest/backtest_light/factorlib/streamlit_app.py
+streamlit run /data-platform/yzl/factor_manage/factorlib/streamlit_app.py
 tmux ls
 tmux attach -t streamlit_app
 tmux kill-session -t streamlit_app
+pkill -f streamlit
