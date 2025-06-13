@@ -158,38 +158,52 @@ if factor_images:
 else:
     st.info("未找到图像文件，请确认 IMAGE_PATH 中存在对应的 PNG 文件。")
 
-#20250613 新加
+# 近30天各因子Pnl
 st.subheader("近30天各因子Pnl")
 tz = pytz.timezone('Asia/Shanghai')
 today = datetime.now(tz).date()
 start_date = (today - timedelta(days=30)).strftime('%Y-%m-%d')
 end_date   = today.strftime('%Y-%m-%d')
 start_label, end_label = 1, 288
-intermediate_dir = "/data-platform/yzl/factor_manage/result/report/intermediate"
-num_xticks = 10
 
-files = glob(os.path.join(intermediate_dir, "*.parquet"))
+
+users = ['xubo', 'yzl', 'gt', 'gux']
 pnl_dict = {}
-for f in files:
-    name = os.path.splitext(os.path.basename(f))[0]
-    df = pd.read_parquet(f)
-    df_f = filter_parquet_data(df, start_date, end_date, start_label, end_label)
-    if "pnl" in df_f.columns:
-        pnl_dict[name] = df_f["pnl"].cumsum()
+for user in users:
+    intermediate_dir = os.path.join(SHARED_PATH, user, 'factor_manage', 'result', 'report', 'intermediate')
+    try:
+        parquet_files = glob(os.path.join(intermediate_dir, '*.parquet'))
+    except Exception as e:
+        logger.error(f"读取目录 {intermediate_dir} 出错: {e}")
+        continue
+    for pfile in parquet_files:
+        name = os.path.splitext(os.path.basename(pfile))[0]
+        try:
+            df = pd.read_parquet(pfile)
+        except Exception as e:
+            logger.error(f"加载文件 {pfile} 出错: {e}")
+            continue
+        df_f = filter_parquet_data(df, start_date, end_date, start_label, end_label)
+        if 'pnl' in df_f.columns:
+            pnl_series = df_f['pnl'].cumsum()
+            pnl_dict[name] = pnl_series
+        else:
+            logger.warning(f"文件 {pfile} 中未找到 pnl 列")
 
 if not pnl_dict:
     st.info("暂无Pnl数据")
 else:
-    ref_series = max(pnl_dict.values(), key=lambda s: len(s))
-    idx = ref_series.index
-    x = list(range(len(idx)))
-    xtick_labels = [f"{d.date().isoformat()}_{lbl}" for d, lbl in idx]
+    # 找到最长序列做参考索引
+    ref_index = max(pnl_dict.values(), key=lambda s: len(s)).index
+    x = list(range(len(ref_index)))
+    xtick_labels = [f"{d.date().isoformat()}_{lbl}" for d, lbl in ref_index]
 
     fig, ax = plt.subplots(figsize=(12, 6))
     for name, series in pnl_dict.items():
-        filled = series.reindex(idx).fillna(method='ffill').fillna(0)
-        ax.plot(x, filled.values, label=name)
+        aligned = series.reindex(ref_index).fillna(method='ffill').fillna(0)
+        ax.plot(x, aligned.values, label=name)
 
+    num_xticks = 10
     step = max(1, len(x) // num_xticks)
     ax.set_xticks(x[::step])
     ax.set_xticklabels([xtick_labels[i] for i in x][::step], rotation=45)
@@ -197,6 +211,8 @@ else:
     ax.set_title("last 30 days Pnl")
     ax.legend(loc='upper left', fontsize='small', ncol=2)
     st.pyplot(fig)
-    save_dir = "/data-platform/yzl/factor_manage/result/report/image"
+
+    # 保存图片
+    save_dir = os.path.join(SHARED_PATH, 'yzl', 'factor_manage', 'result', 'report', 'image')
     os.makedirs(save_dir, exist_ok=True)
-    fig.savefig(os.path.join(save_dir, "last_30_days_pnl.png"))
+    fig.savefig(os.path.join(save_dir, 'last_30_days_pnl.png'), bbox_inches='tight')
