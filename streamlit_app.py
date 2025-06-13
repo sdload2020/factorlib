@@ -158,61 +158,77 @@ if factor_images:
 else:
     st.info("未找到图像文件，请确认 IMAGE_PATH 中存在对应的 PNG 文件。")
 
-# 近30天各因子Pnl
-st.subheader("近30天各因子Pnl")
+# 近30天及全周期因子Pnl对比
+st.subheader("因子回测累积Pnl对比")
+
 tz = pytz.timezone('Asia/Shanghai')
 today = datetime.now(tz).date()
-start_date = (today - timedelta(days=30)).strftime('%Y-%m-%d')
-end_date   = today.strftime('%Y-%m-%d')
+end_date = today.strftime('%Y-%m-%d')
+start_date_all = '2025-01-01'
+start_date_30 = (today - timedelta(days=30)).strftime('%Y-%m-%d')
 start_label, end_label = 1, 288
 
-
-users = ['xubo', 'yzl', 'gt', 'gux']
-pnl_dict = {}
+# 收集数据
+users = ['xubo','yzl','gt','gux']
+pnl_all = {}
+pnl_30  = {}
 for user in users:
     intermediate_dir = os.path.join(SHARED_PATH, user, 'factor_manage', 'result', 'report', 'intermediate')
     try:
-        parquet_files = glob(os.path.join(intermediate_dir, '*.parquet'))
+        files = glob(os.path.join(intermediate_dir, '*.parquet'))
     except Exception as e:
         logger.error(f"读取目录 {intermediate_dir} 出错: {e}")
         continue
-    for pfile in parquet_files:
-        name = os.path.splitext(os.path.basename(pfile))[0]
+    for f in files:
+        name = os.path.splitext(os.path.basename(f))[0]
         try:
-            df = pd.read_parquet(pfile)
+            df = pd.read_parquet(f)
         except Exception as e:
-            logger.error(f"加载文件 {pfile} 出错: {e}")
+            logger.error(f"加载文件 {f} 出错: {e}")
             continue
-        df_f = filter_parquet_data(df, start_date, end_date, start_label, end_label)
-        if 'pnl' in df_f.columns:
-            pnl_series = df_f['pnl'].cumsum()
-            pnl_dict[name] = pnl_series
-        else:
-            logger.warning(f"文件 {pfile} 中未找到 pnl 列")
+        df_all = filter_parquet_data(df, start_date_all, end_date, start_label, end_label)
+        if 'pnl' in df_all.columns:
+            pnl_all[name] = df_all['pnl'].cumsum()
+        df_30 = filter_parquet_data(df, start_date_30, end_date, start_label, end_label)
+        if 'pnl' in df_30.columns:
+            pnl_30[name] = df_30['pnl'].cumsum()
 
-if not pnl_dict:
-    st.info("暂无Pnl数据")
-else:
-    # 找到最长序列做参考索引
-    ref_index = max(pnl_dict.values(), key=lambda s: len(s)).index
-    x = list(range(len(ref_index)))
-    xtick_labels = [f"{d.date().isoformat()}_{lbl}" for d, lbl in ref_index]
+# 绘制双子图
+fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(16, 18))
+num_xticks = 10
 
-    fig, ax = plt.subplots(figsize=(12, 6))
-    for name, series in pnl_dict.items():
-        aligned = series.reindex(ref_index).fillna(method='ffill').fillna(0)
-        ax.plot(x, aligned.values, label=name)
-
-    num_xticks = 10
+# 全周期
+if pnl_all:
+    ref_idx = max(pnl_all.values(), key=lambda s: len(s)).index
+    x = list(range(len(ref_idx)))
+    labels = [f"{d.date().isoformat()}_{lbl}" for d, lbl in ref_idx]
+    for name, series in pnl_all.items():
+        vals = series.reindex(ref_idx).fillna(method='ffill').fillna(0).values
+        ax1.plot(x, vals, label=name)
     step = max(1, len(x) // num_xticks)
-    ax.set_xticks(x[::step])
-    ax.set_xticklabels([xtick_labels[i] for i in x][::step], rotation=45)
-    ax.set_ylabel("Cumulative PnL")
-    ax.set_title("last 30 days Pnl")
-    ax.legend(loc='upper left', fontsize='small', ncol=2)
-    st.pyplot(fig)
+    ax1.set_xticks(x[::step])
+    ax1.set_xticklabels([labels[i] for i in x][::step], rotation=45)
+ax1.set_title(f" {start_date_all} - now PnL")
+ax1.set_ylabel("Cumulative PnL")
+ax1.legend(loc='upper left', fontsize='small', ncol=2)
 
-    # 保存图片
-    save_dir = os.path.join(SHARED_PATH, 'yzl', 'factor_manage', 'result', 'report', 'image')
-    os.makedirs(save_dir, exist_ok=True)
-    fig.savefig(os.path.join(save_dir, 'last_30_days_pnl.png'), bbox_inches='tight')
+# 近30天
+if pnl_30:
+    ref_idx2 = max(pnl_30.values(), key=lambda s: len(s)).index
+    x2 = list(range(len(ref_idx2)))
+    labels2 = [f"{d.date().isoformat()}_{lbl}" for d, lbl in ref_idx2]
+    for name, series in pnl_30.items():
+        vals2 = series.reindex(ref_idx2).fillna(method='ffill').fillna(0).values
+        ax2.plot(x2, vals2, label=name)
+    step2 = max(1, len(x2) // num_xticks)
+    ax2.set_xticks(x2[::step2])
+    ax2.set_xticklabels([labels2[i] for i in x2][::step2], rotation=45)
+ax2.set_title("last 30 days PnL")
+ax2.set_ylabel("Cumulative PnL")
+ax2.legend(loc='upper left', fontsize='small', ncol=2)
+
+# 展示并保存
+st.pyplot(fig)
+save_dir = os.path.join(SHARED_PATH, 'yzl', 'factor_manage', 'result', 'report', 'image')
+os.makedirs(save_dir, exist_ok=True)
+fig.savefig(os.path.join(save_dir, 'pnl_overall.png'), bbox_inches='tight')
