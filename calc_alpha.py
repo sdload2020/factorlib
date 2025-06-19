@@ -338,9 +338,9 @@ class AlphaCalc:
         return indicator_dict
 
     def run(self):
-        if self.composite_method:
-            logger.info("进入复合因子计算:")
-            pass
+        # if self.composite_method:
+        #     logger.info("进入复合因子计算:")
+            # pass
         if self.run_mode == 'all':
             indicator_dict = self.handle_all(self.bar_dict)
             self.indicator_dict = indicator_dict
@@ -396,7 +396,7 @@ class AlphaCalc:
                     }
                 else:
                     handle_dict = self.bar_dict
-                addition_dict = self.get_bar_dict(handle_dict, new_indices)
+                addition_dict = self.get_bar_dict(self.bar_dict, new_indices)
                 new_indicator_dict = self.handle_window(new_indices, indicator_dict=addition_dict)
                 for key in new_indicator_dict.keys():
                     if key not in indicator_dict:
