@@ -9,7 +9,7 @@ import ast,sys
 from configs.syspath import (BASE_PATH,FACTOR_CODE_PATH, LOGS_PATH)
 from loguru import logger
 from utils.logger_setup import setup_execution_logger
-
+from datetime import datetime
 
 def run_factor(params):
     simulator = AlphaCalc(params)
@@ -42,6 +42,17 @@ def main(factor_name):
 
 
         factor_params = next((f for f in arrays['factors'] if f['name'] == factor_name), None)
+        if factor_params.get('if_crontab') == True and factor_params.get('run_mode') == 'online':
+            logger.info("因子run_mode为online,且if_crontab为True, 判断为定时增量更新, 进入检查前置数据flag文件是否就绪")
+            today = datetime.now().strftime("%Y-%m-%d")
+            today = '2025-06-18'
+            f1 = f"/data-platform/shared/kline/flags/futures/{today}.log"
+            f2 = f"/data-platform/shared/kline/flags/universe/{today}.log"
+            if not (os.path.exists(f1) and os.path.exists(f2)):
+                logger.info("flag文件未就绪,行情数据未准备好, 终止后续流程")
+                sys.exit(1)
+            logger.info("flag文件就绪, 继续执行")
+
         logger.info(factor_params)
         if factor_params is None:
             raise ValueError(f"Factor {factor_name} not found in the config file.")
