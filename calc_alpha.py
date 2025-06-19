@@ -133,7 +133,7 @@ class AlphaCalc:
         self.factortype2 = prams.get('factortype2', 'cs')  # Default to 'cs' if not provided
         self.if_prod = prams.get('if_prod', False)
         self.level = prams.get('level', 1)
-        self.if_crontab = prams.get('if_crontab', False)
+        self.if_crontab = prams.get('if_crontab', True)
         current_date_str = time.strftime('%Y-%m-%d', time.localtime(time.time()))
         self.out_sample_date = prams.get('out_sample_date', None)
         if self.composite_method:
@@ -178,23 +178,32 @@ class AlphaCalc:
         self.mindex = pd.MultiIndex.from_product([self.dr, bars], names=['date', 'Label'])
         if not os.path.exists(UNIVERSE_PATH):
             raise FileNotFoundError(f"Universe file not found at {UNIVERSE_PATH}")
-        self.univ = pd.read_parquet(UNIVERSE_PATH).reindex(self.mindex).ffill()
+        # self.mask = pd.read_parquet(UNIVERSE_PATH).reindex(self.mindex).ffill()
         self.funding_rate_path = f"{SHARED_PATH}/crypto/funding_rate/{self.fre}/funding_rate.parquet"
+        self.mask_path = f"{SHARED_PATH}/shared/kline/output_parquet_{self.fre}/univ_mask.parquet"
         if prams.get('bar_dict') is None:
             data = {}
             for key in self.bar_fields:
-                if key == 'FundingRate':
+                if key == 'funding_rate' or key == 'mask' or key == 'ret':
                     continue
                 file_path = f"{self.dpath}{key.lower()}.parquet"
                 if not os.path.exists(file_path):
                     raise FileNotFoundError(f"Data file for {key} not found at {file_path}")
                 df = pd.read_parquet(file_path)
                 data[key] = df.reindex(self.mindex)
-            if 'FundingRate' in self.bar_fields:
-                bar_rescaled = rescale(data, self.fre, [k for k in self.bar_fields if k != 'FundingRate'])
+            bar_rescaled = rescale(data, self.fre, [k for k in self.bar_fields if k != 'funding_rate' and k != 'mask' and k != 'ret'])
+            df_mask = pd.read_parquet(self.mask_path)
+            df_mask = df_mask.reindex(bar_rescaled['Last'].index)
+            self.mask = df_mask
+            if 'funding_rate' in self.bar_fields:
                 df_fr = pd.read_parquet(self.funding_rate_path)
-                df_fr = df_fr.reindex(bar_rescaled['Last'].index).ffill()
-                bar_rescaled['FundingRate'] = df_fr
+                df_fr = df_fr.reindex(bar_rescaled['Last'].index)
+                bar_rescaled['funding_rate'] = df_fr
+            if 'mask' in self.bar_fields:
+                bar_rescaled['mask'] = df_mask
+            if 'ret' in self.bar_fields:
+                bar_rescaled['ret'] = bar_rescaled['Last'].pct_change()
+            
             else:
                 bar_rescaled = rescale(data, self.fre, self.bar_fields)
             del data
@@ -222,9 +231,14 @@ class AlphaCalc:
                         df_factor = pd.read_parquet(factor_path)
                         self.bar_dict[factor] = df_factor
 
-            if 'FundingRate' not in self.bar_dict:
+            if 'funding_rate' not in self.bar_dict:
                 df_fr = pd.read_parquet(self.funding_rate_path)
-                self.bar_dict['FundingRate'] = df_fr
+                self.bar_dict['funding_rate'] = df_fr
+            if 'mask' not in self.bar_dict:
+                df_mask = pd.read_parquet(self.mask_path)
+                self.bar_dict['mask'] = df_mask
+            if 'ret' not in self.bar_dict:
+                self.bar_dict['ret'] = self.bar_dict['Last'].pct_change()
 
         if 'Last_next' not in self.bar_dict:
             raise KeyError("'Last_next' key not found in bar_dict.")
@@ -232,7 +246,7 @@ class AlphaCalc:
         # self.ret_1lag = self.bar_dict['Last'].pct_change().shift(-1)
         if self.ret_1lag.empty:
             raise ValueError("ret_1lag is empty. Please check if 'Last_next' data is correct.")
-        self.mask = self.univ.loc[self.ret_1lag.index].ffill().replace(False, np.nan).astype(float)
+        # self.mask = self.univ.loc[self.ret_1lag.index].ffill().replace(False, np.nan).astype(float)
         self.indicator_dict = {'indicator': None}
         self.run_result = None
 
@@ -325,7 +339,7 @@ class AlphaCalc:
 
     def run(self):
         if self.composite_method:
-            logger.info("run:"+1)
+            logger.info("进入复合因子计算:")
             pass
         if self.run_mode == 'all':
             indicator_dict = self.handle_all(self.bar_dict)
@@ -791,7 +805,7 @@ class AlphaCalc:
         ax3.xaxis.set_major_locator(ticker.MaxNLocator(nbins=10))
         ax4 = ax3.twinx()
         ax4.set_ylabel('Benchmark')
-        ax4.plot(intermediate_df.index, intermediate_df['benchmark'].cumsum(), color='tab:orange', label='Cumulative Benchmark')
+        ax4.plot(intermediate_df.index, intermediate_df['benchmark'].cumsum(), color='tab:orange', label='Benchmark')
         lines3, labels3 = ax3.get_legend_handles_labels()
         lines4, labels4 = ax4.get_legend_handles_labels()
         all_lines2 = lines3 + lines4
@@ -807,7 +821,7 @@ class AlphaCalc:
         ax3b.xaxis.set_major_locator(ticker.MaxNLocator(nbins=10))
         ax4b = ax3b.twinx()
         ax4b.set_ylabel('Benchmark (Last 30 Days)')
-        ax4b.plot(subset_df.index, subset_df['benchmark'].cumsum(), color='tab:orange', label='Cumulative Benchmark')
+        ax4b.plot(subset_df.index, subset_df['benchmark'].cumsum(), color='tab:orange', label='Benchmark')
         fig2.tight_layout(rect=[0, 0, 1, 0.95])
 
         if savefig:
