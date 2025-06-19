@@ -6,10 +6,10 @@ from calc_alpha import AlphaCalc
 import os
 from pathlib import Path
 import ast,sys
-from configs.syspath import (BASE_PATH,FACTOR_CODE_PATH, LOGS_PATH)
+from configs.syspath import (BASE_PATH,FACTOR_CODE_PATH, LOGS_PATH, WORK_PATH)
 from loguru import logger
 from utils.logger_setup import setup_execution_logger
-
+from datetime import datetime
 
 def run_factor(params):
     simulator = AlphaCalc(params)
@@ -22,6 +22,7 @@ def main(factor_name):
     logger.info("-" * 150)
     logger.info("开始运行 run_factor")
     logger.info("运行因子计算")
+
     try:
         fileName = factor_name + '.py'
         path = Path(FACTOR_CODE_PATH)
@@ -42,6 +43,23 @@ def main(factor_name):
 
 
         factor_params = next((f for f in arrays['factors'] if f['name'] == factor_name), None)
+        if factor_params.get('if_crontab') and factor_params.get('run_mode') == 'online':
+            logger.info(f"因子--{factor_name}: run_mode为online,且if_crontab为True, 判断为定时增量更新, 进入检查前置数据flag文件是否就绪")
+            today = datetime.now().strftime("%Y-%m-%d")
+            # today = "2025-06-18"  # 测试用
+            flag_dir = os.path.join(WORK_PATH, 'flags', today)
+            flag_file = os.path.join(flag_dir, f"{factor_name}.flag")
+            if os.path.exists(flag_file):
+                logger.info(f"因子--{factor_name}: flag文件已存在, 今日已完成执行, 直接退出")
+                sys.exit(1)
+            logger.info(f"因子--{factor_name}: flag文件不存在, 继续检查前置数据flag文件是否就绪")
+            f1 = f"/data-platform/shared/kline/flags/futures/{today}.flag"
+            f2 = f"/data-platform/shared/kline/flags/universe/{today}.flag"
+            if not (os.path.exists(f1) and os.path.exists(f2)):
+                logger.info("前置数据flag文件未就绪,行情数据未准备好, 终止后续流程")
+                sys.exit(1)
+            logger.info("前置数据flag文件就绪, 继续执行")
+
         logger.info(factor_params)
         if factor_params is None:
             raise ValueError(f"Factor {factor_name} not found in the config file.")
@@ -63,36 +81,3 @@ if __name__ == "__main__":
     args = parser.parse_args()
     name = args.name
     main(args.name)
-    # parser = argparse.ArgumentParser(...)
-    # args = parser.parse_args()
-    
-    # # start_time = time.time()
-
-    # fileName = name + '.py'
-    # path = Path(FACTOR_CODE_PATH)
-    # for file_path in path.rglob('*.py'):  # 使用 rglob 递归匹配所有文件
-    #     if file_path.is_file():
-    #         if(file_path.name == fileName):
-    #             with open(file_path, 'r',encoding='utf-8') as f:
-    #                 source = f.read()
-    #             tree = ast.parse(source)
-    #             arrays = {}
-
-    #             for node in tree.body:
-    #                 if isinstance(node, ast.Assign):
-    #                     for target in node.targets:
-    #                         if isinstance(target, ast.Name) and target.id == 'config':
-    #                             arrays = ast.literal_eval(node.value)
-    #                             break
-
-
-    # factor_params = next((f for f in arrays['factors'] if f['name'] == name), None)
-    # logger.info(factor_params)
-    # if factor_params is None:
-    #     raise ValueError(f"Factor {name} not found in the config file.")
-    # start_time = time.time()
-    # indicator_dict_all = run_factor(factor_params)
-    # logger.info(indicator_dict_all)
-    # end_time = time.time()
-    # total_time = end_time - start_time
-    # logger.info(f"执行因子运行时长: {total_time:.2f} seconds")
