@@ -9,6 +9,7 @@ import ast,sys
 from configs.syspath import (BASE_PATH,FACTOR_CODE_PATH, LOGS_PATH, WORK_PATH)
 from loguru import logger
 from utils.logger_setup import setup_execution_logger
+from utils.get_params import get_factor_params
 from datetime import datetime
 
 def run_factor(params):
@@ -24,25 +25,7 @@ def main(factor_name):
     logger.info("运行因子计算")
 
     try:
-        fileName = factor_name + '.py'
-        path = Path(FACTOR_CODE_PATH)
-        for file_path in path.rglob('*.py'):  # 使用 rglob 递归匹配所有文件
-            if file_path.is_file():
-                if(file_path.name == fileName):
-                    with open(file_path, 'r',encoding='utf-8') as f:
-                        source = f.read()
-                    tree = ast.parse(source)
-                    arrays = {}
-
-                    for node in tree.body:
-                        if isinstance(node, ast.Assign):
-                            for target in node.targets:
-                                if isinstance(target, ast.Name) and target.id == 'config':
-                                    arrays = ast.literal_eval(node.value)
-                                    break
-
-
-        factor_params = next((f for f in arrays['factors'] if f['name'] == factor_name), None)
+        factor_params = get_factor_params(factor_name, logger)
         if factor_params.get('if_crontab') and factor_params.get('run_mode') == 'online':
             logger.info(f"因子--{factor_name}: run_mode为online,且if_crontab为True, 判断为定时增量更新, 进入检查前置数据flag文件是否就绪")
             today = datetime.now().strftime("%Y-%m-%d")
