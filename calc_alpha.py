@@ -204,8 +204,8 @@ class AlphaCalc:
             if 'ret' in self.bar_fields:
                 bar_rescaled['ret'] = bar_rescaled['Last'].pct_change()
             
-            else:
-                bar_rescaled = rescale(data, self.fre, self.bar_fields)
+            # else:
+            #     bar_rescaled = rescale(data, self.fre, self.bar_fields)
             del data
             self.bar_dict = bar_rescaled
         
@@ -231,13 +231,13 @@ class AlphaCalc:
                         df_factor = pd.read_parquet(factor_path)
                         self.bar_dict[factor] = df_factor
 
-            if 'funding_rate' not in self.bar_dict:
+            if 'funding_rate' in self.bar_dict:
                 df_fr = pd.read_parquet(self.funding_rate_path)
                 self.bar_dict['funding_rate'] = df_fr
-            if 'mask' not in self.bar_dict:
+            if 'mask' in self.bar_dict:
                 df_mask = pd.read_parquet(self.mask_path)
                 self.bar_dict['mask'] = df_mask
-            if 'ret' not in self.bar_dict:
+            if 'ret' in self.bar_dict:
                 self.bar_dict['ret'] = self.bar_dict['Last'].pct_change()
 
         if 'Last_next' not in self.bar_dict:
@@ -342,36 +342,90 @@ class AlphaCalc:
         #     logger.info("进入复合因子计算:")
             # pass
         if self.run_mode == 'all':
+            logger.info("运行模式=all：开始全量计算")
             indicator_dict = self.handle_all(self.bar_dict)
+            logger.info(f"批量计算完成：indicator 行数={len(indicator_dict['indicator'])}")
             self.indicator_dict = indicator_dict
             self.save_indicator_dict()
-            start_point = indicator_dict['indicator'].index[self.bar_lag+1]
+            logger.info(f"因子结果已保存：日期从 {self.start_date} 到 {self.end_date}")
+            epsilon = 1e-5
+            logger.info(f"头部尾部校验差值阈值：{epsilon}")
+            # 头部增量校验，检查头部start_point行, 第一个非nan/0的列的差异
+            start_point = indicator_dict['indicator'].index[self.bar_lag + 1]
+            logger.info(f"开始检查检查增量头部校验时点：{start_point}, 第一个非nan/0的列值的差异")
             tloc = self.mindex.get_loc(start_point)
-            unit1 = (self.bar_lag * self.bar_num)
-            window_start = tloc - unit1 + 1
-            window_end = tloc + 1
-            if window_start < 0:
-                window_start = 0
-            step_indices = list(range(window_start + self.bar_num - 1, window_end, self.bar_num))
-            window_index = self.mindex[step_indices]
-            bar_dict = self.get_bar_dict(self.bar_dict, window_index)
-            bar_indicator_dict_head = self.handle_window(window_index, indicator_dict=bar_dict)
-            chk1 = (bar_indicator_dict_head['indicator'].loc[start_point] - indicator_dict['indicator'].loc[start_point]).values[0]
-            epsilon = 1e-10
-            if abs(chk1) < epsilon:
-                mindex = indicator_dict['indicator'].index[-7:]
-                bar_dict = self.get_bar_dict(self.bar_dict, mindex)
-                bar_indicator_dict_tail = self.handle_window(mindex, indicator_dict=bar_dict)
-                chk2 = (bar_indicator_dict_tail['indicator'].loc[mindex] - indicator_dict['indicator'].loc[mindex]).sum().sum()
-                if abs(chk2) < epsilon:
-                    self.run_result = indicator_dict
-                    return self.run_result
-                else:
-                    self.run_result = {'all': indicator_dict, 'tail': bar_indicator_dict_tail}
-                    return self.run_result
+            window_size = self.bar_lag * self.bar_num
+            ws = max(tloc - window_size + 1, 0)
+            we = tloc + 1
+            steps = list(range(ws + self.bar_num - 1, we, self.bar_num))
+            window_idx = self.mindex[steps]
+            bar_dict_head = self.get_bar_dict(self.bar_dict, window_idx)
+            head_dict = self.handle_window(window_idx, indicator_dict=bar_dict_head)
+            diff_head = head_dict['indicator'].loc[start_point] - indicator_dict['indicator'].loc[start_point]
+            head_failed = False
+            for uid, d in diff_head.items():
+                if pd.notna(d) and abs(d) > epsilon:
+                    batch_v = indicator_dict['indicator'].loc[start_point, uid]
+                    inc_v   = head_dict['indicator'].loc[start_point, uid]
+                    logger.warning(f"头部校验失败, 第一个差异点: UID={uid}, handle_all={batch_v}, handle_bar={inc_v}, 差值={d}")
+                    head_failed = True
+                    break
+            if not head_failed:
+                logger.success("头部校验通过: 无差异点")
+
+            # 尾部增量校验 检验尾部7个时间点总和的差异
+            tail_idx = indicator_dict['indicator'].index[-7:]
+            bar_dict_tail = self.get_bar_dict(self.bar_dict, tail_idx)
+            tail_dict = self.handle_window(tail_idx, indicator_dict=bar_dict_tail)
+            # 聚合差值总和
+            diff_tail = tail_dict['indicator'].loc[tail_idx] - indicator_dict['indicator'].loc[tail_idx]
+            chk2 = diff_tail.sum().sum()
+            logger.info(f"开始检验尾部7个时间点{tail_idx}总和的差异")
+            logger.info(f"尾部校验差值总和：{chk2}")
+            tail_failed = chk2 > epsilon
+            if tail_failed:
+                # 定位第一个差异点用于调试
+                for point in tail_idx:
+                    for uid, d in diff_tail.loc[point].items():
+                        if pd.notna(d) and abs(d) > epsilon:
+                            batch_v = indicator_dict['indicator'].loc[point, uid]
+                            inc_v   = tail_dict['indicator'].loc[point, uid]
+                            logger.warning(f"尾部校验失败, 第一个差异点：时间={point}, UID={uid}, handle_all={batch_v}, handle_bar={inc_v}, 差值={d}")
+                            break
+                    if tail_failed:
+                        break
             else:
-                self.run_result = {'all': indicator_dict, 'head': bar_indicator_dict_head}
-                return self.run_result
+                logger.success("尾部校验通过: 差值总和小于阈值")
+
+            # 汇总返回结果,如果有问题，返回有问题的部分
+            # if head_failed or tail_failed:
+            #     result = {'all': indicator_dict}
+            #     if head_failed:
+            #         result['head'] = head_dict
+            #     if tail_failed:
+            #         result['tail'] = tail_dict
+            #     self.run_result = result
+            # else:
+            #     logger.info("校验全部通过，返回全量结果")
+            #     self.run_result = indicator_dict
+
+            # 最终返回，并记录失败部分
+            failures = []
+            if head_failed:
+                failures.append('头部')
+                logger.warning(f"头部校验失败，返回头部结果和计算使用到的数据以供调试 : {head_dict}")
+            if tail_failed:
+                failures.append('尾部')
+                logger.warning(f"尾部校验失败，返回尾部结果和计算使用到的数据以供调试 : {tail_dict}")
+            if failures:
+                logger.info(f"校验失败部分: {','.join(failures)}, 仍返回全量indicator_dict")
+            else:
+                logger.success("所有校验通过, 返回全量indicator_dict")
+            logger.info(f"使用到的数据类别: {self.bar_dict.keys()}")
+            logger.info(f"使用到的数据: {self.bar_dict}")
+            self.run_result = indicator_dict
+            return self.run_result
+
         elif self.run_mode == 'online':
             factor_name = self.name
             indicator_path = os.path.join(self.factor_values_path, f"{factor_name}.parquet")
@@ -388,14 +442,14 @@ class AlphaCalc:
                 if new_indices.empty:
                     self.run_result = indicator_dict
                     return indicator_dict
-                if self.depend_factor_field:
-                    handle_dict = {
-                        key: self.bar_dict[key]
-                        for key in self.depend_factor_field
-                        if key in self.bar_dict
-                    }
-                else:
-                    handle_dict = self.bar_dict
+                # if self.depend_factor_field:
+                #     handle_dict = {
+                #         key: self.bar_dict[key]
+                #         for key in self.depend_factor_field
+                #         if key in self.bar_dict
+                #     }
+                # else:
+                #     handle_dict = self.bar_dict
                 addition_dict = self.get_bar_dict(self.bar_dict, new_indices)
                 new_indicator_dict = self.handle_window(new_indices, indicator_dict=addition_dict)
                 for key in new_indicator_dict.keys():

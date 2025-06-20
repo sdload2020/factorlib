@@ -55,8 +55,8 @@ def run_scripts(factor_name):
     factor_params = get_factor_params(factor_name)
     if factor_params.get('if_crontab') and factor_params.get('run_mode') == 'online':
         write_flag_file(factor_name)
-        logger.info(f"因子 {factor_name} 运行完成, 已写入flag文件...")
-    logger.info(f"因子 {factor_name} 运行完成...")
+        logger.success(f"因子 {factor_name} 运行完成, 已写入flag文件...")
+    logger.success(f"因子 {factor_name} 运行完成...")
 def run_scripts2(factor_name):
     # subprocess.check_call([sys.executable, 'factor', '--name', factor_name])
     p = subprocess.Popen([sys.executable, 'factor', '--name', factor_name])
@@ -69,8 +69,8 @@ def run_scripts2(factor_name):
     factor_params = get_factor_params(factor_name)
     if factor_params.get('if_crontab') and factor_params.get('run_mode') == 'online':
         write_flag_file(factor_name)
-        logger.info(f"因子 {factor_name} 运行完成, 已写入flag文件...")
-    logger.info(f"因子 {factor_name} 运行完成...")
+        logger.success(f"因子 {factor_name} 运行完成, 已写入flag文件...")
+    logger.success(f"因子 {factor_name} 运行完成...")
 def tmain(names):
     # logger.info("names:"+names)
     factors = names.split(",") 
@@ -87,7 +87,7 @@ def main():
     setup_execution_logger(LOGS_PATH)
     parser = argparse.ArgumentParser(description='Run factor computations, backtest, and plotting for multiple factors.')
     # parser.add_argument('--config', type=str, default=FACTOR_CONFIG_PATH, help='Path to the config YAML file.')
-    parser.add_argument('--name', nargs='+', type=str, default=['sample'], help='输入的数组参数，用空格分隔') ##用于debug调试 added 250530
+    parser.add_argument('--name', nargs='+', type=str, default=['vpfs'], help='输入的数组参数，用空格分隔') ##用于debug调试 added 250530
     # parser.add_argument('--name', nargs='+', type=str, required=True,help='输入的数组参数，用空格分隔')
     args = parser.parse_args()
     factors = args.name
