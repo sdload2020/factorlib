@@ -10,6 +10,7 @@ import ast,sys
 from configs.syspath import (BASE_PATH, FACTOR_CODE_PATH,SHARED_PATH, FACTOR_VALUES_PATH,LOGS_PATH)
 
 from loguru import logger
+from utils.get_params import get_factor_params
 from utils.logger_setup import setup_execution_logger
 setup_execution_logger(LOGS_PATH)
 
@@ -30,25 +31,8 @@ def main(name):
     logger.info("运行回测")
     start_time = time.time()
     try: 
-        fileName = name + '.py'
-        path = Path(FACTOR_CODE_PATH)
-        for file_path in path.rglob('*.py'):  # 使用 rglob 递归匹配所有文件
-            if file_path.is_file():
-                if(file_path.name == fileName):
-                    with open(file_path, 'r',encoding='utf-8') as f:
-                        source = f.read()
-                    tree = ast.parse(source)
-                    arrays = {}
 
-                    for node in tree.body:
-                        if isinstance(node, ast.Assign):
-                            for target in node.targets:
-                                if isinstance(target, ast.Name) and target.id == 'config':
-                                    arrays = ast.literal_eval(node.value)
-                                    break
-
-
-        factor_params = next((f for f in arrays['factors'] if f['name'] == name), None)
+        factor_params = get_factor_params(name, logger)
 
         logger.info(f"因子配置参数:\n {factor_params}")
 

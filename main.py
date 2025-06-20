@@ -10,6 +10,7 @@ from calc_alpha import AlphaCalc
 from configs.syspath import (BASE_PATH, WORK_PATH, LOGS_PATH, FACTOR_CODE_PATH)
 from loguru import logger
 from utils.logger_setup import setup_execution_logger
+from utils.get_params import get_factor_params
 from datetime import datetime
 from pathlib import Path
 
@@ -19,26 +20,6 @@ def write_flag_file(factor_name):
     flag_dir = os.path.join(WORK_PATH, 'flags', today)
     os.makedirs(flag_dir, exist_ok=True)
     open(os.path.join(flag_dir, f"{factor_name}.flag"), 'w').close()
-
-def get_factor_params(factor_name):
-    fileName = factor_name + '.py'
-    path = Path(FACTOR_CODE_PATH)
-    for file_path in path.rglob('*.py'):  # 使用 rglob 递归匹配所有文件
-        if file_path.is_file():
-            if(file_path.name == fileName):
-                with open(file_path, 'r',encoding='utf-8') as f:
-                    source = f.read()
-                tree = ast.parse(source)
-                arrays = {}
-
-                for node in tree.body:
-                    if isinstance(node, ast.Assign):
-                        for target in node.targets:
-                            if isinstance(target, ast.Name) and target.id == 'config':
-                                arrays = ast.literal_eval(node.value)
-                                break
-    factor_params = next((f for f in arrays['factors'] if f['name'] == factor_name), None)
-    return factor_params
 
 def run_scripts(factor_name):
     # logger.info(BASE_PATH)
@@ -52,11 +33,12 @@ def run_scripts(factor_name):
         return
     subprocess.check_call([sys.executable, os.path.join(WORK_PATH, 'factorlib/')+'run_backtest.py', '--name', factor_name])
     subprocess.check_call([sys.executable, os.path.join(WORK_PATH, 'factorlib/')+'run_plot.py', '--name', factor_name])
-    factor_params = get_factor_params(factor_name)
+    factor_params = get_factor_params(factor_name, logger)
     if factor_params.get('if_crontab') and factor_params.get('run_mode') == 'online':
         write_flag_file(factor_name)
-        logger.info(f"因子 {factor_name} 运行完成, 已写入flag文件...")
-    logger.info(f"因子 {factor_name} 运行完成...")
+        logger.success(f"因子 {factor_name} 运行完成, 已写入flag文件...")
+    logger.success(f"因子 {factor_name} 运行完成...")
+
 def run_scripts2(factor_name):
     # subprocess.check_call([sys.executable, 'factor', '--name', factor_name])
     p = subprocess.Popen([sys.executable, 'factor', '--name', factor_name])
@@ -66,11 +48,11 @@ def run_scripts2(factor_name):
         return
     subprocess.check_call([sys.executable, 'backtest', '--name', factor_name])
     subprocess.check_call([sys.executable, 'plot', '--name', factor_name])
-    factor_params = get_factor_params(factor_name)
+    factor_params = get_factor_params(factor_name, logger)
     if factor_params.get('if_crontab') and factor_params.get('run_mode') == 'online':
         write_flag_file(factor_name)
-        logger.info(f"因子 {factor_name} 运行完成, 已写入flag文件...")
-    logger.info(f"因子 {factor_name} 运行完成...")
+        logger.success(f"因子 {factor_name} 运行完成, 已写入flag文件...")
+    logger.success(f"因子 {factor_name} 运行完成...")
 def tmain(names):
     # logger.info("names:"+names)
     factors = names.split(",") 
@@ -87,7 +69,7 @@ def main():
     setup_execution_logger(LOGS_PATH)
     parser = argparse.ArgumentParser(description='Run factor computations, backtest, and plotting for multiple factors.')
     # parser.add_argument('--config', type=str, default=FACTOR_CONFIG_PATH, help='Path to the config YAML file.')
-    # parser.add_argument('--name', nargs='+', type=str, default=['vpfs'], help='输入的数组参数，用空格分隔') ##用于debug调试 added 250530
+    # parser.add_argument('--name', nargs='+', type=str, default=['fr_skew_vol_ratios'], help='输入的数组参数，用空格分隔') ##用于debug调试 added 250530
     parser.add_argument('--name', nargs='+', type=str, required=True,help='输入的数组参数，用空格分隔')
     args = parser.parse_args()
     factors = args.name
