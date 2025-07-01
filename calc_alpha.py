@@ -37,7 +37,7 @@ def rescale(dft, fre, bar_fields, require_last=True):
         '6h': 72,
         '8h': 96,
         '12h': 144,
-        '1d': 288
+        '24h': 288
     }
     if fre not in fre2n:
         raise ValueError(f"Unsupported frequency: {fre}")
@@ -54,7 +54,8 @@ def rescale(dft, fre, bar_fields, require_last=True):
         'Open': 'first',
         'Last': 'last',
         'High': 'max',
-        'Low': 'min'
+        'Low': 'min',
+        'Vwap': 'mean'
     }
     for key in bar_fields:
         if key in agg_funcs:
@@ -96,7 +97,7 @@ class AlphaCalc:
         '6h':  6,
         '8h':  8,
         '12h': 12,
-        '1d':  24
+        '24h':  24
     }
 
 
@@ -162,7 +163,7 @@ class AlphaCalc:
             '6h': 72,
             '8h': 96,
             '12h': 144,
-            '1d': 288
+            '24h': 288
         }
         self.fre = prams['frequency']
         if self.fre not in fre2n:
@@ -186,17 +187,18 @@ class AlphaCalc:
         # self.mask = pd.read_parquet(UNIVERSE_PATH).reindex(self.mindex).ffill()
         self.funding_rate_path = f"{SHARED_PATH}/crypto/funding_rate/{self.fre}/funding_rate.parquet"
         self.mask_path = f"{SHARED_PATH}/shared/kline/output_parquet_{self.fre}/univ_mask.parquet"
+        self.vwap_path = f"{SHARED_PATH}/shared/kline/output_parquet_{self.fre}/pv_vwap.parquet"
         if prams.get('bar_dict') is None:
             data = {}
             for key in self.bar_fields:
-                if key == 'funding_rate' or key == 'mask' or key == 'ret':
+                if key == 'funding_rate' or key == 'mask' or key == 'ret' or key == 'Vwap':
                     continue
                 file_path = f"{self.dpath}{key.lower()}.parquet"
                 if not os.path.exists(file_path):
                     raise FileNotFoundError(f"Data file for {key} not found at {file_path}")
                 df = pd.read_parquet(file_path)
                 data[key] = df.reindex(self.mindex)
-            bar_rescaled = rescale(data, self.fre, [k for k in self.bar_fields if k != 'funding_rate' and k != 'mask' and k != 'ret'])
+            bar_rescaled = rescale(data, self.fre, [k for k in self.bar_fields if k != 'funding_rate' and k != 'mask' and k != 'ret' and k != 'Vwap'], require_last=True)
             df_mask = pd.read_parquet(self.mask_path)
             df_mask = df_mask.reindex(bar_rescaled['Last'].index)
             self.mask = df_mask
@@ -208,6 +210,11 @@ class AlphaCalc:
                 bar_rescaled['mask'] = df_mask
             if 'ret' in self.bar_fields:
                 bar_rescaled['ret'] = bar_rescaled['Last'].pct_change()
+            if 'Vwap' in self.bar_fields:
+                df_vwap = pd.read_parquet(self.vwap_path)
+                df_vwap = df_vwap.reindex(bar_rescaled['Last'].index)
+                bar_rescaled['Vwap'] = df_vwap
+
             
             # else:
             #     bar_rescaled = rescale(data, self.fre, self.bar_fields)
@@ -244,6 +251,9 @@ class AlphaCalc:
                 self.bar_dict['mask'] = df_mask
             if 'ret' in self.bar_dict:
                 self.bar_dict['ret'] = self.bar_dict['Last'].pct_change()
+            if 'Vwap' in self.bar_dict:
+                df_vwap = pd.read_parquet(self.vwap_path)
+                self.bar_dict['Vwap'] = df_vwap.reindex(self.mindex)
 
         if 'Last_next' not in self.bar_dict:
             raise KeyError("'Last_next' key not found in bar_dict.")
