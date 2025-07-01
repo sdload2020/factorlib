@@ -35,6 +35,7 @@ def rescale(dft, fre, bar_fields, require_last=True):
         '4h': 48,
         '6h': 72,
         '8h': 96,
+        '12h': 144,
         '1d': 288
     }
     if fre not in fre2n:
