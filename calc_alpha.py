@@ -93,6 +93,7 @@ class AlphaCalc:
         '4h':  4,
         '6h':  6,
         '8h':  8,
+        '12h': 12,
         '1d':  24
     }
 
@@ -158,6 +159,7 @@ class AlphaCalc:
             '4h': 48,
             '6h': 72,
             '8h': 96,
+            '12h': 144,
             '1d': 288
         }
         self.fre = prams['frequency']
