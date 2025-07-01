@@ -215,7 +215,6 @@ class AlphaCalc:
                 df_vwap = df_vwap.reindex(bar_rescaled['Last'].index)
                 bar_rescaled['Vwap'] = df_vwap
 
-            
             # else:
             #     bar_rescaled = rescale(data, self.fre, self.bar_fields)
             del data
